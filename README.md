@@ -6,7 +6,7 @@ Suppose you are interested in how many hits David Ortiz had in 2013. The below s
 
 ``` 
 from stat_miner import *
-hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2013)
+hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2010)
 hitter_miner = HitterMiner(hitter_id)
 season_stats = hitter_miner.mine_season_stats(2013)
 print season_stats["H"] 
