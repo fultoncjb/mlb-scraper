@@ -1,14 +1,6 @@
 
-from datetime import date, datetime
-import heapq
-import numpy as np
-from draft_kings import CONTEST_SALARY, get_csv_dict
 from rotowire import *
 from multiprocessing import Pool
-from sqlalchemy.exc import IntegrityError
-from draft_kings import *
-from baseball_reference import PlayerNameNotFound
-import math
 from team_dict import *
 from baseball_reference import *
 
@@ -30,8 +22,7 @@ def get_pregame_stats_wrapper(games, threading_enabled=True):
 
 def get_pregame_stats(game):
     game_miner = GameMiner(game)
-    game_miner.update_ids()
-    game_miner.update_park_factors()
+    game_miner.mine_park_factors()
     game_miner.get_pregame_hitting_stats()
     game_miner.get_pregame_pitching_stats()
 
@@ -46,32 +37,36 @@ def mine_pregame_stats(threading_enabled=True):
 
 
 class HitterMiner(object):
-    def __init__(self, hitter):
-        self._hitter = hitter
+    def __init__(self, baseball_reference_id):
+        self._baseball_reference_id = baseball_reference_id
         self.career_stats = dict()
         self.vs_hand_stats = dict()
         self.vs_pitcher_stats = dict()
         self.recent_stats = dict()
         self.season_stats = dict()
 
-    def mine_career_stats(self, hitter_career_soup):
-        return get_career_hitting_stats(self._hitter.baseball_reference_id, hitter_career_soup)
+    @staticmethod
+    def get_id(full_name, team_abbreviation, year):
+        return get_hitter_id(full_name, team_abbreviation, year)
 
-    def mine_vs_hand_stats(self, hitter_career_soup, pitcher_hand):
-        return get_vs_hand_hitting_stats(self._hitter.baseball_reference_id, pitcher_hand, hitter_career_soup)
+    def mine_career_stats(self, hitter_career_soup=None):
+        return get_career_hitting_stats(self._baseball_reference_id, hitter_career_soup)
 
-    def mine_recent_stats(self, hitter_career_soup):
-        return get_recent_hitting_stats(self._hitter.baseball_reference_id, hitter_career_soup)
+    def mine_vs_hand_stats(self, pitcher_hand, hitter_career_soup=None):
+        return get_vs_hand_hitting_stats(self._baseball_reference_id, pitcher_hand, hitter_career_soup)
 
-    def mine_season_stats(self):
-        return get_season_hitting_stats(self._hitter.baseball_reference_id)
+    def mine_recent_stats(self, hitter_career_soup=None):
+        return get_recent_hitting_stats(self._baseball_reference_id, hitter_career_soup)
 
-    def mine_vs_pitcher_stats(self, pitcher_baseball_reference_id):
-        return get_vs_pitcher_stats(self._hitter.baseball_reference_id, pitcher_baseball_reference_id)
+    def mine_season_stats(self, year=None, soup=None):
+        return get_season_hitting_stats(self._baseball_reference_id, year, soup)
+
+    def mine_vs_pitcher_stats(self, pitcher_baseball_reference_id, vs_soup=None):
+        return get_vs_pitcher_stats(self._baseball_reference_id, pitcher_baseball_reference_id, vs_soup)
 
     def mine_yesterdays_results(self):
         yesterdays_date = date.today() - timedelta(days=1)
-        return get_hitting_game_log(self._hitter.baseball_reference_id, game_date=yesterdays_date)
+        return get_hitting_game_log(self._baseball_reference_id, game_date=yesterdays_date)
 
 
 class LineupMiner(object):
@@ -115,6 +110,10 @@ class PitcherMiner(object):
         self.vs_stats = dict()
         self.recent_stats = dict()
         self.season_stats = dict()
+
+    @staticmethod
+    def get_id(full_name, team, year):
+        return get_pitcher_id(full_name, team, year)
 
     def mine_pregame_stats(self):
         """ Get pregame stats for the given pitcher
