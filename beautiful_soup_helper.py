@@ -1,3 +1,7 @@
+"""
+beautiful_soup_helper.py
+Module used for implementing some wrapper functions for BeautifulSoup
+"""
 
 from bs4 import BeautifulSoup, Comment
 import urllib

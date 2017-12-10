@@ -1,3 +1,7 @@
+"""
+draft_kings.py
+Module used for scraping data from draftkings.com
+"""
 
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait

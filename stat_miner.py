@@ -1,3 +1,7 @@
+"""
+stat_miner.py
+Top-level module used for mining stats for particular players and games
+"""
 
 from rotowire import *
 from multiprocessing import Pool
@@ -83,11 +87,9 @@ class LineupMiner(object):
         :return:
         """
         for current_hitter in self._lineup:
-            hitter_miner = HitterMiner()
-            hitter_miner.rotowire_id = current_hitter.rotowire_id
-            if hitter_miner.baseball_reference_id is None:
-                hitter_miner.baseball_reference_id = get_hitter_id()
-            hitter_career_soup = get_hitter_page_career_soup(hitter_miner.baseball_reference_id)
+            baseball_reference_id = HitterMiner.get_id(current_hitter.name)
+            hitter_miner = HitterMiner(baseball_reference_id)
+            hitter_career_soup = get_hitter_page_career_soup(baseball_reference_id)
             hitter_miner.career_stats = current_hitter.mine_career_stats(hitter_career_soup)
             hitter_miner.vs_hand_stats = current_hitter.mine_vs_hand_stats(hitter_career_soup, self._opposing_pitcher.pitcher_hand)
             hitter_miner.recent_stats = current_hitter.mine_recent_stats(hitter_career_soup)
@@ -142,12 +144,13 @@ class GameMiner(object):
         self._game = game
         self._home_lineup_miner = LineupMiner(game.home_lineup, game.away_pitcher, game.game_date,
                                               game.game_time, is_home=True)
-        self._home_pitcher_miner = PitcherMiner(game.away_lineup, game.home_pitcher, game.game_date,
-                                                game.game_time, is_home=True)
+        # TODO should have the ability to specify the baseball reference ID so we can use the database
+        baseball_reference_id = PitcherMiner.get_id(game.home_pitcher.name, game.home_pitcher.team, game.game_date.year)
+        self._home_pitcher_miner = PitcherMiner(baseball_reference_id)
         self._away_lineup_miner = LineupMiner(game.away_lineup, game.home_pitcher, game.game_date,
                                               game.game_time, is_home=False)
-        self._away_pitcher_miner = PitcherMiner(game.home_lineup, game.away_pitcher, game.game_date,
-                                                game.game_time, is_home=False)
+        baseball_reference_id = PitcherMiner.get_id(game.away_pitcher.name, game.away_pitcher.team, game.game_date.year)
+        self._away_pitcher_miner = PitcherMiner(baseball_reference_id)
 
     def get_pregame_hitting_stats(self):
         self._away_lineup_miner.mine_pregame_stats()

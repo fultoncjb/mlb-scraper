@@ -1,3 +1,7 @@
+"""
+baseball_reference.py
+Module used for scraping data from baseballreference.com
+"""
 
 from beautiful_soup_helper import *
 from datetime import date, timedelta

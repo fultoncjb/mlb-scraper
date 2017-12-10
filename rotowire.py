@@ -1,3 +1,8 @@
+"""
+rotowire.py
+Module used for scraping data from rotowire.com
+"""
+
 from datetime import datetime, date
 from team_dict import *
 from baseball_reference import get_team_info, TableNotFound
