@@ -13,3 +13,13 @@ print season_stats["H"]
 ```
 Note that the HitterMiner is dependent on a unique identifier derived from the name of the player, the player's team, and the year. The team and year represent a season the player was on a given team, making it easier to locate the player's unique identifier.
 
+Similarly, this can be done with pitchers. Suppose you are interested in how many strikeouts Pedro Martinez had in 1999. The below snippet illustrates how to achieve this using the API:
+
+```
+from stat_miner import *
+pitcher_id = PitcherMiner.get_id("Pedro Martinez, "BOS", 2001)
+pitcher_miner = PitcherMiner(pitcher_id)
+season_stats = pitcher_miner.mine_season_stats(1999)
+print season_stats["SO"]
+```
+
