@@ -17,7 +17,7 @@ Similarly, this can be done with pitchers. Suppose you are interested in how man
 
 ```
 from stat_miner import *
-pitcher_id = PitcherMiner.get_id("Pedro Martinez, "BOS", 2001)
+pitcher_id = PitcherMiner.get_id("Pedro Martinez", "BOS", 2001)
 pitcher_miner = PitcherMiner(pitcher_id)
 season_stats = pitcher_miner.mine_season_stats(1999)
 print season_stats["SO"]
