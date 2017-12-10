@@ -88,24 +88,17 @@ class LineupMiner(object):
             if hitter_miner.baseball_reference_id is None:
                 hitter_miner.baseball_reference_id = get_hitter_id()
             hitter_career_soup = get_hitter_page_career_soup(hitter_miner.baseball_reference_id)
-            hitter_miner.career_stats = self.mine_career_stats(hitter_career_soup)
-            hitter_miner.vs_hand_stats = self.mine_vs_hand_stats(hitter_career_soup, self._opposing_pitcher.pitcher_hand)
-            hitter_miner.recent_stats = self.mine_recent_stats(hitter_career_soup)
-            hitter_miner.season_stats = self.mine_season_stats()
-            hitter_miner.vs_pitcher_stats = self.mine_vs_pitcher_stats(self._opposing_pitcher.baseball_reference_id)
+            hitter_miner.career_stats = current_hitter.mine_career_stats(hitter_career_soup)
+            hitter_miner.vs_hand_stats = current_hitter.mine_vs_hand_stats(hitter_career_soup, self._opposing_pitcher.pitcher_hand)
+            hitter_miner.recent_stats = current_hitter.mine_recent_stats(hitter_career_soup)
+            hitter_miner.season_stats = current_hitter.mine_season_stats()
+            hitter_miner.vs_pitcher_stats = current_hitter.mine_vs_pitcher_stats(self._opposing_pitcher.baseball_reference_id)
             self._hitter_miners.append(hitter_miner)
-
-    def get_team(self):
-        return self._lineup[0].team
 
 
 class PitcherMiner(object):
-    def __init__(self, lineup, pitcher, game_date, game_time, is_home):
-        self._lineup = lineup
-        self._pitcher = pitcher
-        self._game_date = game_date
-        self._game_time = game_time
-        self._is_home = is_home
+    def __init__(self, baseball_reference_id):
+        self.baseball_reference_id = baseball_reference_id
         self.career_stats = dict()
         self.vs_stats = dict()
         self.recent_stats = dict()
@@ -124,39 +117,23 @@ class PitcherMiner(object):
         :param game_date: the date of the game (in the following form yyyy-mm-dd)
         :return: a PregamePitcherGameEntry object without the predicted_draftkings_points field populated
         """
-        pitcher_career_soup = get_pitcher_page_career_soup(self._pitcher.baseball_reference_id)
+        pitcher_career_soup = get_pitcher_page_career_soup(self.baseball_reference_id)
         self.career_stats = self.mine_career_stats(pitcher_career_soup)
-        self.vs_stats = self.mine_vs_stats()
         self.recent_stats = self.mine_recent_stats(pitcher_career_soup)
         self.season_stats = self.mine_season_stats()
 
-    def mine_career_stats(self, pitcher_career_soup):
-        return get_career_pitching_stats(self._pitcher.baseball_reference_id, pitcher_career_soup)
+    def mine_career_stats(self, pitcher_career_soup=None):
+        return get_career_pitching_stats(self.baseball_reference_id, pitcher_career_soup)
 
-    def mine_vs_stats(self, pregame_pitcher_entry):
-        vs_dict = dict()
-        for hitter in self._lineup:
-            vs_dict["H"] += vs_dict["H"] + hitter.vs_stats["H"]
-            vs_dict["BB"] += vs_dict["BB"] + hitter.vs_stats["BB"]
-            vs_dict["SO"] += vs_dict["SO"] + hitter.vs_stats["SO"]
-            vs_dict["HR"] += vs_dict["HR"] + hitter.vs_stats["HR"]
-            vs_dict["PA"] += vs_dict["PA"] + hitter.vs_stats["PA"]
-            vs_dict["RBI"] += vs_dict["RBI"] + hitter.vs_stats["RBI"]
+    def mine_recent_stats(self, pitcher_career_soup=None):
+        return get_recent_pitcher_stats(self.baseball_reference_id, pitcher_career_soup)
 
-        return vs_dict
-
-    def mine_recent_stats(self, pitcher_career_soup):
-        return get_recent_pitcher_stats(self._pitcher.baseball_reference_id, pitcher_career_soup)
-
-    def mine_season_stats(self):
-        return get_season_pitcher_stats(self._pitcher.baseball_reference_id)
+    def mine_season_stats(self, year=None, soup=None):
+        return get_season_pitcher_stats(self.baseball_reference_id, year, soup)
 
     def mine_yesterdays_results(self):
         yesterdays_date = date.today() - timedelta(days=1)
-        return get_pitching_game_log(self._pitcher.baseball_reference_id, game_date=yesterdays_date)
-
-    def get_team(self):
-        return self._pitcher.team
+        return get_pitching_game_log(self.baseball_reference_id, game_date=yesterdays_date)
 
 
 class GameMiner(object):
