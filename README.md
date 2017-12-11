@@ -1,6 +1,14 @@
 # mlb-scraper
 mlb-scraper is a Python package for scraping MLB Stats. The package makes heavy use of BeautifulSoup as the scraping engine.
 
+#### Installation Instructions
+* Download the latest release and unpack it to your local directory.
+* From the latest release folder, run the following commands:
+```
+python setup.py build
+python setup.py install
+```
+
 #### Quick Example
 Suppose you are interested in how many hits David Ortiz had in 2013. The below snippet illustrates how to achieve this using the API:
 
