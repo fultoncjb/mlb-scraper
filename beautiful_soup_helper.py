@@ -59,10 +59,40 @@ def url_to_soup(url):
     return BeautifulSoup(xml, "lxml")
 
 
+def url_to_xml_text(url):
+    """ Take a URL and get the BeautifulSoup object
+    :param url: the absolute URL string
+    :return the BeautifulSoup object returned, return None if the object was not successfully created
+    """
+    xml = urllib.urlopen(url)
+
+    if xml.code == 404:
+        print "Attempt to access invalid URL: " + xml.url
+        raise Http404Exception(url)
+
+    return xml.read()
+
+
 def get_soup_from_url(url):
     for i in range(5):
         try:
             soup = url_to_soup(url)
+        except IOError:
+            print "Socket error. Trying to obtain soup again."
+            continue
+        except Http404Exception:
+            return None
+
+        return soup
+
+    print "Exhausted all attempts to get the soup. Check your internet connection."
+    assert 0
+
+
+def get_xml_from_url(url):
+    for i in range(5):
+        try:
+            soup = url_to_xml_text(url)
         except IOError:
             print "Socket error. Trying to obtain soup again."
             continue

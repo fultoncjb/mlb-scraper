@@ -2,9 +2,13 @@
 from beautiful_soup_helper import *
 from datetime import timedelta
 import time
+import xmltodict
+from xml.etree.ElementTree import fromstring, tostring
+from json import dumps
 
 BASE_URL = 'http://gd2.mlb.com/components/game/mlb/'
 
+PITCH_TYPE_ABBREVIATIONS = ['pch', 'pcu', 'pfc', 'pff', 'pfs', 'pft', 'pkn', 'psi', 'psl']
 
 def int_to_two_digits(int_value):
     return "%02d" % (int_value,)
@@ -293,10 +297,15 @@ def get_game_hitter_stats(soup):
 def get_hitter_ids(game_id_info):
     url = BASE_URL + 'year_' + str(game_id_info.game_date.year) + '/' + 'month_' + int_to_two_digits(
             game_id_info.game_date.month) + '/' + 'day_' + \
-            int_to_two_digits(game_id_info.game_date.day) + '/' + game_id_info.game_id + '/batters/'
+            int_to_two_digits(game_id_info.game_date.day) + '/' + game_id_info.game_id + '/premium/batters/'
     soup = get_soup_from_url(url)
-    batter_ids = soup.select("a[href*=.xml]")
-    return [batter_id.text.strip() for batter_id in batter_ids]
+    batter_ids = soup.select("a[href*=/]")
+    hitter_ids = list()
+    for batter_id in batter_ids:
+        if 'Parent Directory' not in batter_id.text:
+            hitter_ids.append(batter_id.text.replace('/', '').strip())
+
+    return hitter_ids
 
 
 def get_game_pitcher_stats(soup):
@@ -328,8 +337,13 @@ def get_pitcher_ids(game_id_info):
             game_id_info.game_date.month) + '/' + 'day_' + \
             int_to_two_digits(game_id_info.game_date.day) + '/' + game_id_info.game_id + '/pitchers/'
     soup = get_soup_from_url(url)
-    pitcher_ids = soup.select("a[href*=.xml]")
-    return [pitcher_id.text.strip() for pitcher_id in pitcher_ids]
+    pitcher_id_list = soup.select("a[href*=/]")
+    pitcher_ids = list()
+    for pitcher_id in pitcher_id_list:
+        if 'Parent Directory' not in pitcher_id.text:
+            pitcher_ids.append(pitcher_id.text.replace('/', '').strip())
+
+    return pitcher_ids
 
 
 def get_game_batting_orders(game_id_info):
@@ -448,7 +462,7 @@ def mine_pitcher_stats(game_id_info):
             info.game_date.month) + '/' + 'day_' + \
             int_to_two_digits(info.game_date.day) + '/' + info.game_id + '/pitchers/' + pitcher_id
 
-            pitcher_soup = get_soup_from_url(pitcher_url)
+            pitcher_soup = get_xml_from_url(pitcher_url)
 
             pitcher_id_str = pitcher_id.split('.')[0]
             pitcher_stats = PitcherGameStats()
@@ -468,3 +482,87 @@ def mine_games(game_date):
     pitcher_stat_list = mine_pitcher_stats(game_id_info)
 
     return game_list, hitter_stat_list, pitcher_stat_list
+
+
+def get_xml_files(game_id_info_list, url_suffix):
+    players_json_list = list()
+    for game_id_info in game_id_info_list:
+        file_dict = get_xml_file(game_id_info, url_suffix)
+        file_dict['game_id'] = game_id_info.game_id
+        players_json_list.append(file_dict)
+
+    return players_json_list
+
+
+def get_xml_file(game_id_info, url_suffix):
+    url = BASE_URL + 'year_' + str(game_id_info.game_date.year) + '/' + 'month_' + int_to_two_digits(
+        game_id_info.game_date.month) + '/' + 'day_' + \
+          int_to_two_digits(game_id_info.game_date.day) + '/' + game_id_info.game_id + '/' + url_suffix
+    text = get_xml_from_url(url)
+    json = xmltodict.parse(text)
+
+    return json
+
+
+def get_hitter_pitch_xml_files(game_id_info_list):
+    xml_file_list = list()
+    for game_id_info in game_id_info_list:
+        hitter_ids = get_hitter_ids(game_id_info)
+        for hitter_id in hitter_ids:
+            for pitch_type in PITCH_TYPE_ABBREVIATIONS:
+                file_dict = get_xml_file(game_id_info, 'premium/batters/' + hitter_id + '/' + pitch_type + '.xml')
+                file_dict['game_id'] = game_id_info.game_id
+                file_dict['hitter_id'] = hitter_id
+                file_dict['pitch_type'] = pitch_type
+                xml_file_list.append(file_dict)
+
+    return xml_file_list
+
+
+def get_hitter_pregame_xml_files(game_id_info_list):
+    xml_file_list = list()
+    for game_id_info in game_id_info_list:
+        hitter_ids = get_hitter_ids(game_id_info)
+        for hitter_id in hitter_ids:
+            file_dict = get_xml_file(game_id_info, 'batters/' + hitter_id + '.xml')
+            file_dict['game_id'] = game_id_info.game_id
+            xml_file_list.append(file_dict)
+
+    return xml_file_list
+
+
+def get_pitcher_pregame_xml_files(game_id_info_list):
+    xml_file_list = list()
+    for game_id_info in game_id_info_list:
+        pitcher_ids = get_pitcher_ids(game_id_info)
+        for pitcher_id in pitcher_ids:
+            file_dict = get_xml_file(game_id_info, 'pitchers/' + pitcher_id + '.xml')
+            file_dict['game_id'] = game_id_info.game_id
+            xml_file_list.append(file_dict)
+
+    return xml_file_list
+
+
+def get_pitcher_pitch_xml_files(game_id_info_list):
+    xml_file_list = list()
+    for game_id_info in game_id_info_list:
+        pitcher_ids = get_pitcher_ids(game_id_info)
+        for pitcher_id in pitcher_ids:
+            for pitch_type in PITCH_TYPE_ABBREVIATIONS:
+                file_dict = get_xml_file(game_id_info, 'premium/pitchers/' + pitcher_id + '/' + pitch_type + '.xml')
+                file_dict['game_id'] = game_id_info.game_id
+                file_dict['hitter_id'] = pitcher_id
+                file_dict['pitch_type'] = pitch_type
+                xml_file_list.append(file_dict)
+
+    return xml_file_list
+
+
+def get_game_files(game_date):
+    game_id_info_list = get_game_ids(game_date)
+    game_xml_files = get_xml_files(game_id_info_list, 'game.xml')
+    players_xml_files = get_xml_files(game_id_info_list, 'players.xml')
+    plays_xml_files = get_xml_files(game_id_info_list, 'plays.xml')
+    hitter_pitch_xml_files = get_hitter_pitch_xml_files(game_id_info_list)
+
+    return game_xml_files, players_xml_files, plays_xml_files, hitter_pitch_xml_files
