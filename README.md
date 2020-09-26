@@ -5,8 +5,7 @@ mlb-scraper is a Python package for scraping MLB Stats. The package makes heavy 
 * Download the latest release and unpack it to your local directory.
 * From the latest release folder, run the following commands:
 ```
-python setup.py build
-python setup.py install
+pip install .
 ```
 
 #### Quick Example
