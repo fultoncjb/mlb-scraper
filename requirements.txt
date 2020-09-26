@@ -1,3 +1,0 @@
-lxml
-bs4
-bidict
