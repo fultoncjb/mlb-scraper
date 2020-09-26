@@ -145,7 +145,7 @@ def get_vs_table_row_dict(soup, batter_id, pitcher_id):
     :return: a dictionary representing the stats
     """
     # Note: we seem to need BASE_URL as a prefix during unit tests
-    batter_vs_pitcher_base = "/play-index/batter_vs_pitcher.cgi?batter="
+    batter_vs_pitcher_base = "/play-index/batter_vs_pitcher.fcgi?batter="
 
     try:
         results_table = soup.find("table", {"id": "ajax_result_table"})
@@ -263,7 +263,7 @@ def get_career_hitting_stats(baseball_reference_id, soup=None):
     :return: dictionary representation of the hitter's stat home page
     """
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
         soup = get_comment_soup_from_url(url)
 
     return get_table_row_dict(soup, "total", "Career Totals", "Split")
@@ -277,7 +277,7 @@ def get_vs_hand_hitting_stats(baseball_reference_id, hand_value, soup=None):
     :return: dictionary representation of the hitter's stat home page
     """
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
         soup = get_comment_soup_from_url(url)
 
     if hand_value == "L":
@@ -285,7 +285,7 @@ def get_vs_hand_hitting_stats(baseball_reference_id, hand_value, soup=None):
     elif hand_value == "R":
         hand = "vs RHP"
     else:
-        print "Invalid hand enum %s." % hand_value
+        print("Invalid hand enum %s." % hand_value)
         return None
 
     return get_table_row_dict(soup, "plato", hand, "Split")
@@ -298,7 +298,7 @@ def get_recent_hitting_stats(baseball_reference_id, soup=None):
     :return: dictionary representation of the hitter's stats
     """
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=b"
         soup = get_comment_soup_from_url(url)
 
     return get_table_row_dict(soup, "total", "Last 7 days", "Split")
@@ -314,8 +314,8 @@ def get_season_hitting_stats(baseball_reference_id, year=None, soup=None):
     if year is None:
         year = date.today().year
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=" + str(year) + "&t=b"
-        print url
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=" + str(year) + "&t=b"
+        print(url)
         soup = get_comment_soup_from_url(url)
 
     return get_table_body_row_dict(soup, "total", str(year) + " Totals", "Split")
@@ -329,8 +329,8 @@ def get_vs_pitcher_stats(batter_id, pitcher_id, soup=None):
     :return: dictionary representation of the hitter's stats
     """
     if soup is None:
-        url = BASE_URL + "/play-index/batter_vs_pitcher.cgi?batter=" + str(batter_id)
-        print url
+        url = BASE_URL + "/play-index/batter_vs_pitcher.fcgi?batter=" + str(batter_id)
+        print(url)
         soup = get_soup_from_url(url)
 
     return get_vs_table_row_dict(soup, batter_id, pitcher_id)
@@ -341,7 +341,7 @@ def get_hitter_page_career_soup(baseball_reference_id):
     :param baseball_reference_id: BaseballReference unique ID for the hitter of interest
     :return: BeautifulSoup for the hitter stat home page
     """
-    return get_comment_soup_from_url(BASE_URL + "/players/split.cgi?id=" +
+    return get_comment_soup_from_url(BASE_URL + "/players/split.fcgi?id=" +
                                                  str(baseball_reference_id) + "&year=Career&t=b")
 
 
@@ -352,7 +352,7 @@ def get_career_pitching_stats(baseball_reference_id, soup=None):
     :return: dictionary representation of the career stats
     """
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
         soup = get_comment_soup_from_url(url)
 
     return get_table_row_dict(soup, "total_extra", "Career Totals", "Split")
@@ -363,8 +363,8 @@ def get_pitcher_page_career_soup(baseball_reference_id):
     :param baseball_reference_id: BaseballReference ID of the pitcher of interest
     :return: BeautifulSoup object of the pitcher's stat home page
     """
-    url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
-    print url
+    url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
+    print(url)
     return get_comment_soup_from_url(url)
 
 
@@ -378,8 +378,8 @@ def get_season_pitcher_stats(baseball_reference_id, year=None, soup=None):
     if year is None:
         year = date.today().year
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=" + str(year) + "&t=p"
-        print url
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=" + str(year) + "&t=p"
+        print(url)
         soup = get_comment_soup_from_url(url)
 
     return get_table_body_row_dict(soup, "total_extra", str(year) + " Totals", "Split")
@@ -392,13 +392,13 @@ def get_recent_pitcher_stats(baseball_reference_id, soup=None):
     :return: dictionary representation of the pitcher stats
     """
     if soup is None:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
         soup = get_comment_soup_from_url(url)
 
     try:
         table_row_dict = get_table_row_dict(soup, "total_extra", "Last 14 days", "Split")
     except TableRowNotFound:
-        url = BASE_URL + "/players/split.cgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
+        url = BASE_URL + "/players/split.fcgi?id=" + str(baseball_reference_id) + "&year=Career&t=p"
         table_row_dict = get_table_row_dict(get_comment_soup_from_url(url), "total_extra", "Last 14 days", "Split")
 
     return table_row_dict
@@ -413,17 +413,17 @@ def get_hitting_game_log(baseball_reference_id, soup=None, game_date=None):
     if game_date is None:
         game_date = date.today()
     if soup is None:
-        url = BASE_URL + "/players/gl.cgi?id=" + str(baseball_reference_id) + "&t=b&year=" + str(game_date.year)
+        url = BASE_URL + "/players/gl.fcgi?id=" + str(baseball_reference_id) + "&t=b&year=" + str(game_date.year)
         soup = get_soup_from_url(url)
     try:
         return get_table_row_dict(soup, "batting_gamelogs", date_abbreviations[game_date.month] + " " +
                                   str(game_date.day), "Date")
     # TODO: just try again for now, explore BeautifulSoup built-in options for this
     except TableNotFound as e:
-        print e
+        print(e)
         return None
     except TableRowNotFound as e1:
-        print e1
+        print(e1)
         return None
 
 
@@ -437,16 +437,16 @@ def get_pitching_game_log(baseball_reference_id, soup=None, game_date=None):
     if game_date is None:
         game_date = date.today()
     if soup is None:
-        url = BASE_URL + "/players/gl.cgi?id=" + str(baseball_reference_id) + "&t=p&year=" + str(game_date.year)
+        url = BASE_URL + "/players/gl.fcgi?id=" + str(baseball_reference_id) + "&t=p&year=" + str(game_date.year)
         soup = get_soup_from_url(url)
     try:
         return get_table_row_dict(soup, "pitching_gamelogs", date_abbreviations[game_date.month] + " " +
                                   str(game_date.day), "Date")
     except TableNotFound as e:
-        print e
+        print(e)
         return None
     except TableRowNotFound as e1:
-        print e1
+        print(e1)
         return None
 
 

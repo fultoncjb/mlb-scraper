@@ -133,7 +133,7 @@ def get_game_lineups(url=None, game_date=None):
             home_team_pitcher = get_pitcher(pitchers[1], home_team_abbreviation)
         # No pitchers present on page
         except AttributeError:
-            print "Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation)
+            print("Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation))
             continue
 
         current_game = Game(away_team_lineup, away_team_pitcher, home_team_lineup, home_team_pitcher, str(game_date), str(game_time))
@@ -144,7 +144,7 @@ def get_game_lineups(url=None, game_date=None):
             current_game.umpire_name = game_factors.ump_name
             games.append(current_game)
         else:
-            print "Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation)
+            print("Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation))
 
     return games
 
@@ -164,7 +164,7 @@ def get_external_game_factors(game_node):
         try:
             ump_name = get_ump_name(game_node)
         except UmpDataNotFound:
-            print "Ump data not found."
+            print("Ump data not found.")
         park_hitter_score, park_pitcher_score = get_team_info(get_baseball_reference_team(home_team_abbreviation))
         game_factors = GameFactors(wind_speed, ump_name, park_pitcher_score, park_hitter_score)
     except AttributeError:
@@ -382,7 +382,7 @@ def get_game_matchups(url=None, game_date=None):
             matchup.home_pitcher = get_pitcher(pitchers[1], matchup.home_team)
         # No pitchers present on page
         except AttributeError:
-            print "Game between %s and %s is not valid." % (matchup.away_team, matchup.home_team)
+            print("Game between %s and %s is not valid." % (matchup.away_team, matchup.home_team))
             continue
 
         matchups.append(matchup)

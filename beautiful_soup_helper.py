@@ -4,7 +4,7 @@ Module used for implementing some wrapper functions for BeautifulSoup
 """
 
 from bs4 import BeautifulSoup, Comment
-import urllib
+from urllib.request import urlopen
 from datetime import date
 
 
@@ -30,10 +30,10 @@ def url_to_comment_soup(url):
     :return: the BeautifulSoup object containing the comments, return None if the object was not
     successfully created
     """
-    xml = urllib.urlopen(url)
+    xml = urlopen(url)
 
     if xml.code == 404:
-        print "Attempt to access invalid URL: " + xml.url
+        print("Attempt to access invalid URL: " + xml.url)
         raise Http404Exception(url)
 
     soup_initial = BeautifulSoup(xml, "lxml")
@@ -50,10 +50,10 @@ def url_to_soup(url):
     :param url: the absolute URL string
     :return the BeautifulSoup object returned, return None if the object was not successfully created
     """
-    xml = urllib.urlopen(url)
+    xml = urlopen(url)
 
     if xml.code == 404:
-        print "Attempt to access invalid URL: " + xml.url
+        print("Attempt to access invalid URL: " + xml.url)
         raise Http404Exception(url)
 
     return BeautifulSoup(xml, "lxml")
@@ -64,14 +64,14 @@ def get_soup_from_url(url):
         try:
             soup = url_to_soup(url)
         except IOError:
-            print "Socket error. Trying to obtain soup again."
+            print("Socket error. Trying to obtain soup again.")
             continue
         except Http404Exception:
             return None
 
         return soup
 
-    print "Exhausted all attempts to get the soup. Check your internet connection."
+    print("Exhausted all attempts to get the soup. Check your internet connection.")
     assert 0
 
 
@@ -80,13 +80,13 @@ def get_comment_soup_from_url(url):
         try:
             soup = url_to_comment_soup(url)
         except IOError:
-            print "Socket error. Trying to obtain soup again."
+            print("Socket error. Trying to obtain soup again.")
             continue
         except Http404Exception:
             return None
 
         return soup
 
-    print "Exhausted all attempts to get the soup. Check your internet connection."
+    print("Exhausted all attempts to get the soup. Check your internet connection.")
     assert 0
 
