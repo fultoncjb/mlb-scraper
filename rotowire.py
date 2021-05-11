@@ -9,19 +9,19 @@ from baseball_reference import get_team_info, TableNotFound
 from beautiful_soup_helper import get_soup_from_url
 
 # Daily lineups relevant HTML labels
-DAILY_LINEUPS_URL = "http://www.rotowire.com/baseball/daily_lineups.htm"
+DAILY_LINEUPS_URL = "https://www.rotowire.com/baseball/daily-lineups.php"
 GAME_REGION_LABEL = "offset1 span15"
-TEAM_REGION_LABEL = "span15 dlineups-topbox"
-AWAY_TEAM_REGION_LABEL = "span5 dlineups-topboxleft"
-HOME_TEAM_REGION_LABEL = "span5 dlineups-topboxright"
+TEAM_REGION_LABEL = "lineup__main"
+AWAY_TEAM_REGION_LABEL = "lineup__list is-visit"
+HOME_TEAM_REGION_LABEL = "lineup__list is-home"
 GAME_INFO_LABEL = "dlineups-topboxcenter"
 TIME_REGION_LABEL = "dlineups-topboxcenter-topline"
-AWAY_TEAM_PLAYER_LABEL = "dlineups-vplayer"
-HOME_TEAM_PLAYER_LABEL = "dlineups-hplayer"
-LINEUPS_CLASS_LABEL = "span15 dlineups-mainbox"
-POSITION_CLASS_LABEL = "dlineups-pos"
+AWAY_TEAM_PLAYER_LABEL = "lineup__player"
+HOME_TEAM_PLAYER_LABEL = AWAY_TEAM_PLAYER_LABEL
+LINEUPS_CLASS_LABEL = "lineup__box"
+POSITION_CLASS_LABEL = "lineup__pos"
 PITCHERS_REGION_LABEL = "span11 dlineups-pitchers"
-HAND_CLASS_LABEL = "dlineups-lr"
+HAND_CLASS_LABEL = "lineup__bats"
 DRAFTKINGS_LINK_LABEL = "span15 dlineups-promo-bottom"
 
 # Individual player page relevant HTML labels
@@ -117,20 +117,25 @@ def get_game_lineups(url=None, game_date=None):
         home_team_lineup = list()
         away_team_lineup = list()
         try:
-            away_team_abbreviation = game_node.find("div", {"class": AWAY_TEAM_REGION_LABEL}).text.split()[0]
-            home_team_abbreviation = game_node.find("div", {"class": HOME_TEAM_REGION_LABEL}).text.split()[0]
-            game_main_soup = game_node.find("div", {"class": LINEUPS_CLASS_LABEL})
-            game_time = game_node.find("div", {"class": TIME_REGION_LABEL}).find("a").text.replace("ET", "").strip()
+            top_soup = game_node.find("div", {"class": "lineup__top"})
+            away_team_abbreviation = top_soup.find("div", {"class": "lineup__team is-visit"}).find("div", {"class": "lineup__abbr"}).text
+            home_team_abbreviation = top_soup.find("div", {"class": "lineup__team is-home"}).find("div", {"class": "lineup__abbr"}).text
+            game_time = game_node.parent.find("div", {"class": "lineup__time"}).text.replace("ET", "").strip()
             game_time = datetime.strptime(game_time, '%I:%M %p').strftime("%H:%M")
 
-            for away_player in game_main_soup.findAll("div", {"class": AWAY_TEAM_PLAYER_LABEL}):
+            main_game_node = game_node.find("div", {"class": "lineup__main"})
+            away_lineup_node = main_game_node.find("ul", {"class": "lineup__list is-visit"})
+            home_lineup_node = main_game_node.find("ul", {"class": "lineup__list is-home"})
+
+            for away_player in away_lineup_node.findAll("li", {"class": AWAY_TEAM_PLAYER_LABEL}):
                 away_team_lineup.append(get_hitter(away_player, away_team_abbreviation))
-            for home_player in game_main_soup.findAll("div", {"class": HOME_TEAM_PLAYER_LABEL}):
+            for home_player in home_lineup_node.findAll("li", {"class": HOME_TEAM_PLAYER_LABEL}):
                 home_team_lineup.append(get_hitter(home_player, home_team_abbreviation))
 
-            pitchers = game_node.find("div", PITCHERS_REGION_LABEL).findAll("div")
-            away_team_pitcher = get_pitcher(pitchers[0], away_team_abbreviation)
-            home_team_pitcher = get_pitcher(pitchers[1], home_team_abbreviation)
+            away_pitcher = away_lineup_node.find("div", {"class": "lineup__player-highlight-name"})
+            away_team_pitcher = get_pitcher(away_pitcher, away_team_abbreviation)
+            home_pitcher = home_lineup_node.find("div", {"class": "lineup__player-highlight-name"})
+            home_team_pitcher = get_pitcher(home_pitcher, home_team_abbreviation)
         # No pitchers present on page
         except AttributeError:
             print("Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation))
@@ -139,7 +144,7 @@ def get_game_lineups(url=None, game_date=None):
         current_game = Game(away_team_lineup, away_team_pitcher, home_team_lineup, home_team_pitcher, str(game_date), str(game_time))
 
         if current_game.is_valid():
-            game_factors = get_external_game_factors(game_node)
+            game_factors = get_external_game_factors(game_node, home_team_abbreviation)
             current_game.wind_speed = game_factors.wind_speed
             current_game.umpire_name = game_factors.ump_name
             games.append(current_game)
@@ -149,14 +154,17 @@ def get_game_lineups(url=None, game_date=None):
     return games
 
 
-def get_external_game_factors(game_node):
+def get_external_game_factors(game_node, home_team_abbreviation):
     """
     :param game_node: BeautifulSoup object containing the game from the daily lineups page
     :return: a GameEntry containing the
     """
     try:
-        home_team_abbreviation = game_node.find("div", {"class": HOME_TEAM_REGION_LABEL}).text.split()[0]
-        wind_speed = get_wind_speed(game_node)
+        extra_node = game_node.find("div", {"class": "lineup__extra"})
+        weather_node = extra_node.find("div", {"class": "lineup__weather"}).find("div",
+                                                                                 {"class": "lineup__weather-text"})
+        wind_speed = get_wind_speed(weather_node)
+        temperature = get_temperature(weather_node)
         """TODO: add temperature
         For now, we will use nominal temperature and umpire readings
         """
@@ -190,7 +198,7 @@ def get_hitter(soup, team):
     """
     rotowire_id = get_id(soup)
     position = soup.find("div", {"class": POSITION_CLASS_LABEL}).text
-    hand = get_hand(soup)
+    hand = get_hand_bats(soup)
 
     return PlayerStruct(team, rotowire_id, position, hand)
 
@@ -204,17 +212,25 @@ def get_pitcher(soup, team):
     :param database_session: SQLAlchemy database session (default is None)
     """
     rotowire_id = get_id(soup)
-    hand = get_hand(soup)
+    hand = get_hand_throws(soup)
 
     return PlayerStruct(team, rotowire_id, "P", hand)
 
 
-def get_hand(soup):
+def get_hand_throws(soup):
     """
     :param soup: BeautifulSoup node of the player
     :return: Hand of the player
     """
-    return soup.find("span", {"class": HAND_CLASS_LABEL}).text.strip().replace("(", "").replace(")", "")
+    return soup.find("span", {"class": "lineup__throws"}).text
+
+
+def get_hand_bats(soup):
+    """
+    :param soup: BeautifulSoup node of the player
+    :return: Hand of the player
+    """
+    return soup.find("span", {"class": "lineup__bats"}).text
 
 
 def get_name_from_id(rotowire_id):
@@ -278,19 +294,27 @@ def get_table_row_dict(soup, table_name, table_row_label, table_column_label):
     raise TableNotFound(table_name)
 
 
-def get_wind_speed(soup):
+def get_wind_speed(weather_node):
     """ Extract the wind speed from the Rotowire game soup
     :param soup: Rotowire soup for the individual game
     :return: an integer representation of the wind speed (negative for "In", positive for "Out", zero otherwise)
     """
-    wind_text = soup.find("div", {"class": WIND_LABEL}).text
+    wind_text = weather_node.text
     wind_words = wind_text.strip().split()
-    if wind_words[len(wind_words)-1] == "Out":
-        return int(wind_words[1])
-    elif wind_words[len(wind_words)-1] == "In":
-        return -1*int(wind_words[1])
+    if wind_words[-1] == "Out":
+        return int(wind_words[-3])
+    elif wind_words[-1] == "In":
+        return -1*int(wind_words[-3])
 
     return 0
+
+
+def get_temperature(weather_node):
+    """ Extract the temperature from the Rotowire game soup
+    :param weather_node: Rotowire soup for the individual game
+    :return: an integer representation of the temperature (in degrees Fahrenheit)
+    """
+    return weather_node.text.split()[2]
 
 
 class UmpDataNotFound(Exception):
@@ -304,17 +328,7 @@ def get_ump_name(soup):
     :param soup: Rotowire soup for the individual game
     :return: float representation of the strikeouts per game
     """
-    span15s = soup.findAll("div", {"class": "span15"})
-    for span15 in span15s:
-        node = span15.find("b")
-        if node is not None:
-            if node.text.strip() == "Ump:":
-                ump_text = span15.text
-                ump_words = ump_text.strip().split()
-                if len(ump_words) >= 3:
-                    return ump_words[1].strip() + " " + ump_words[2].strip()
-
-    raise UmpDataNotFound
+    return soup.find("div", {"class": "lineup__umpire"}).find("a").text
 
 
 def get_ump_ks_per_game(soup):

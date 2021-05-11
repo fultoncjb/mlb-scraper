@@ -7,8 +7,8 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from urlparse import urljoin
-from urllib import urlretrieve
+from urllib.parse import urljoin
+from urllib.request import urlretrieve
 import csv
 
 ROTOWIRE_DAILY_LINEUPS_URL = "http://www.rotowire.com/baseball/daily_lineups.htm"
