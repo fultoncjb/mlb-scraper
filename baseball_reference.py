@@ -145,17 +145,17 @@ def get_vs_table_row_dict(soup, batter_id, pitcher_id):
     :return: a dictionary representing the stats
     """
     # Note: we seem to need BASE_URL as a prefix during unit tests
-    batter_vs_pitcher_base = "/play-index/batter_vs_pitcher.fcgi?batter="
+    batter_vs_pitcher_base = "/baseball/batter_vs_pitcher.cgi?batter="
 
     try:
-        results_table = soup.find("table", {"id": "ajax_result_table"})
+        results_table = soup.find("table", {"id": "result_table"})
         table_header_list = results_table.find("thead").findAll("th")
         table_header_list = [x.text for x in table_header_list]
         table_body = results_table.find("tbody")
     except AttributeError:
         raise TableNotFound("ajax_result_table")
 
-    matching_url = batter_vs_pitcher_base + batter_id + "&pitcher=" + pitcher_id
+    matching_url = batter_vs_pitcher_base + batter_id + "&pitcher=" + pitcher_id + "&post=0"
     try:
         stat_row = table_body.find("a", {"href": matching_url}).parent.parent
     except AttributeError:
@@ -329,7 +329,7 @@ def get_vs_pitcher_stats(batter_id, pitcher_id, soup=None):
     :return: dictionary representation of the hitter's stats
     """
     if soup is None:
-        url = BASE_URL + "/play-index/batter_vs_pitcher.fcgi?batter=" + str(batter_id)
+        url = "https://stathead.com/baseball/batter_vs_pitcher.cgi?batter=" + str(batter_id) + "&utm_medium=br&utm_source=player-finder-links&utm_campaign=baseball"
         print(url)
         soup = get_soup_from_url(url)
 
