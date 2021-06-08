@@ -4,7 +4,7 @@ Module used for implementing some wrapper functions for BeautifulSoup
 """
 
 from bs4 import BeautifulSoup, Comment
-from urllib.request import urlopen
+import requests
 from datetime import date
 
 
@@ -30,13 +30,13 @@ def url_to_comment_soup(url):
     :return: the BeautifulSoup object containing the comments, return None if the object was not
     successfully created
     """
-    xml = urlopen(url)
+    response = requests.get(url)
 
-    if xml.code == 404:
-        print("Attempt to access invalid URL: " + xml.url)
+    if response.status_code == 404:
+        print("Attempt to access invalid URL: " + response.url)
         raise Http404Exception(url)
 
-    soup_initial = BeautifulSoup(xml, "lxml")
+    soup_initial = BeautifulSoup(response.text, "lxml")
     soup_comments = soup_initial.findAll(text=lambda text: isinstance(text, Comment))
     soup = str()
     for soup_comment in soup_comments:
@@ -50,13 +50,13 @@ def url_to_soup(url):
     :param url: the absolute URL string
     :return the BeautifulSoup object returned, return None if the object was not successfully created
     """
-    xml = urlopen(url)
+    response = requests.get(url)
 
-    if xml.code == 404:
-        print("Attempt to access invalid URL: " + xml.url)
+    if response.status_code == 404:
+        print("Attempt to access invalid URL: " + response.url)
         raise Http404Exception(url)
 
-    return BeautifulSoup(xml, "lxml")
+    return BeautifulSoup(response.text, "lxml")
 
 
 def get_soup_from_url(url):

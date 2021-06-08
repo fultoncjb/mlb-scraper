@@ -40,12 +40,12 @@ WIND_LABEL = "dlineups-topboxcenter-bottomline"
 
 
 class PlayerStruct(object):
-    def __init__(self, team, rotowire_id, position, hand):
+    def __init__(self, team, rotowire_id, position, hand, name):
         self.team = team
         self.rotowire_id = rotowire_id
         self.position = position
         self.hand = hand
-        self.name = ''
+        self.name = name
 
     def __eq__(self, other):
         return self.team == other.team and self.rotowire_id == other.rotowire_id and \
@@ -116,6 +116,8 @@ def get_game_lineups(url=None, game_date=None):
         game_node = header_node.parent
         home_team_lineup = list()
         away_team_lineup = list()
+        away_team_abbreviation = "UNKNOWN"
+        home_team_abbreviation = "UNKNOWN"
         try:
             top_soup = game_node.find("div", {"class": "lineup__top"})
             away_team_abbreviation = top_soup.find("div", {"class": "lineup__team is-visit"}).find("div", {"class": "lineup__abbr"}).text
@@ -145,8 +147,13 @@ def get_game_lineups(url=None, game_date=None):
 
         if current_game.is_valid():
             game_factors = get_external_game_factors(game_node, home_team_abbreviation)
-            current_game.wind_speed = game_factors.wind_speed
-            current_game.umpire_name = game_factors.ump_name
+            # TODO figure out if we can just not populate these fields
+            if game_factors is not None:
+                current_game.wind_speed = game_factors.wind_speed
+                current_game.umpire_name = game_factors.ump_name
+            else:
+                current_game.wind_speed = 0
+                current_game.umpire_name = "Unknown"
             games.append(current_game)
         else:
             print("Game between %s and %s is not valid." % (away_team_abbreviation, home_team_abbreviation))
@@ -197,10 +204,11 @@ def get_hitter(soup, team):
     :param database_session: SQLAlchemy database session (default is None)
     """
     rotowire_id = get_id(soup)
+    name = soup.find("a")["title"]
     position = soup.find("div", {"class": POSITION_CLASS_LABEL}).text
     hand = get_hand_bats(soup)
 
-    return PlayerStruct(team, rotowire_id, position, hand)
+    return PlayerStruct(team, rotowire_id, position, hand, name)
 
 
 def get_pitcher(soup, team):
@@ -213,8 +221,9 @@ def get_pitcher(soup, team):
     """
     rotowire_id = get_id(soup)
     hand = get_hand_throws(soup)
+    name = soup.find("a").text
 
-    return PlayerStruct(team, rotowire_id, "P", hand)
+    return PlayerStruct(team, rotowire_id, "P", hand, name)
 
 
 def get_hand_throws(soup):
