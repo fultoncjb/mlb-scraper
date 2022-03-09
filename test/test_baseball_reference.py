@@ -2,6 +2,7 @@
 from stat_miner import *
 from unittest import TestCase
 
+
 class BaseballReferenceTests(TestCase):
 
     def test_get_season_hitter_stats(self):
@@ -37,3 +38,39 @@ class BaseballReferenceTests(TestCase):
         self.assertAlmostEqual(float(season_stats['BAbip']), 0.321, 3)
         self.assertEqual(int(season_stats['tOPS+']), 100)
         self.assertEqual(int(season_stats['sOPS+']), 167)
+
+    def test_get_season_pitcher_stats(self):
+        pitcher_id = PitcherMiner.get_id("Pedro Martinez", "BOS", 2001)
+        pitcher_miner = PitcherMiner(pitcher_id)
+        season_stats = pitcher_miner.mine_season_stats(1999)
+
+        self.assertEqual(int(season_stats['W']), 23)
+        self.assertEqual(int(season_stats['L']), 4)
+        self.assertAlmostEqual(float(season_stats['ERA']), 2.07)
+        self.assertEqual(int(season_stats['G']), 31)
+        self.assertEqual(int(season_stats['GS']), 29)
+        self.assertEqual(int(season_stats['GF']), 1)
+        self.assertEqual(int(season_stats['CG']), 5)
+        self.assertEqual(int(season_stats['SHO']), 1)
+        self.assertEqual(int(season_stats['SV']), 0)
+        self.assertAlmostEqual(float(season_stats['IP']), 213.1)
+        self.assertEqual(int(season_stats['H']), 160)
+        self.assertEqual(int(season_stats['R']), 56)
+        self.assertEqual(int(season_stats['ER']), 49)
+        self.assertEqual(int(season_stats['HR']), 9)
+        self.assertEqual(int(season_stats['BB']), 37)
+        self.assertEqual(int(season_stats['IBB']), 1)
+        self.assertEqual(int(season_stats['SO']), 313)
+        self.assertEqual(int(season_stats['HBP']), 9)
+        self.assertEqual(int(season_stats['BK']), 0)
+        self.assertEqual(int(season_stats['WP']), 6)
+        self.assertEqual(int(season_stats['BF']), 835)
+        self.assertAlmostEqual(float(season_stats['WHIP']), 0.923)
+        self.assertAlmostEqual(float(season_stats['SO9']), 13.2)
+        self.assertAlmostEqual(float(season_stats['SO/W']), 8.46)
+
+
+
+
+
+
