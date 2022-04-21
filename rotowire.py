@@ -4,6 +4,15 @@ Module used for scraping data from rotowire.com
 """
 
 from datetime import datetime, date
+
+import bs4
+import selenium.webdriver.remote.webelement
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+
 from team_dict import *
 from baseball_reference import get_team_info, TableNotFound
 from beautiful_soup_helper import get_soup_from_url
@@ -40,12 +49,13 @@ WIND_LABEL = "dlineups-topboxcenter-bottomline"
 
 
 class PlayerStruct(object):
-    def __init__(self, team, rotowire_id, position, hand, name):
+    def __init__(self, team: str, rotowire_id: str, position: str, hand: str, name: str, dfs_salary: int):
         self.team = team
         self.rotowire_id = rotowire_id
         self.position = position
         self.hand = hand
         self.name = name
+        self.dfs_salary = dfs_salary
 
     def __eq__(self, other):
         return self.team == other.team and self.rotowire_id == other.rotowire_id and \
@@ -94,6 +104,108 @@ class HomeAwayEnum(object):
     HOME = 1
 
 
+class SeleniumMiner(object):
+
+    def get_game_lineups(self, url: str = None, game_date: date = None) -> [Game]:
+
+        if url is None:
+            url = DAILY_LINEUPS_URL
+
+        if game_date is None:
+            game_date = date.today()
+
+        # Open the page and show the Draftkings salaries
+        browser = webdriver.Firefox()
+        browser.get(url)
+        dfs_show_salaries_node = browser.find_element(By.XPATH, "//div[@data-name='lineups-mlb-showsalaries']")
+        # TODO this isn't necessarily correct because this won't be the class name if the
+        dfs_yes_button = WebDriverWait(dfs_show_salaries_node, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "toggle-tab")))
+        dfs_yes_button.click()
+        # TODO may also want to click the button determining whether the started games are hidden or not
+        # show_display_settings_button = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "revealer btn soft size-1 pad-2")))
+        # show_display_settings_button.click()
+
+        lineups_header_nodes = browser.find_elements(By.CLASS_NAME, TEAM_REGION_LABEL)
+        games = list()
+        for lineup_header in lineups_header_nodes:
+            home_team_lineup = list()
+            away_team_lineup = list()
+            try:
+                game_node = lineup_header.find_element(By.XPATH, "./..")
+                lineup_top = game_node.find_element(By.CLASS_NAME, "lineup__top")
+                away_team_abbreviation = lineup_top.find_element(By.XPATH, ".//div[@class='lineup__team is-visit']").find_element(By.XPATH, ".//div[@class='lineup__abbr']").get_attribute("innerHTML")
+                home_team_abbreviation = lineup_top.find_element(By.XPATH, ".//div[@class='lineup__team is-home']").find_element(By.XPATH, ".//div[@class='lineup__abbr']").get_attribute("innerHTML")
+                game_time = game_node.parent.find_element(By.CLASS_NAME, "lineup__time").text.replace("ET", "").strip()
+                game_time = datetime.strptime(game_time, '%I:%M %p').strftime("%H:%M")
+
+                main_game_node = game_node.find_element(By.CLASS_NAME, "lineup__main")
+                away_lineup_node = main_game_node.find_element(By.XPATH, ".//ul[@class='lineup__list is-visit']")
+                home_lineup_node = main_game_node.find_element(By.XPATH, ".//ul[@class='lineup__list is-home']")
+
+                # Get the data on the away lineup with DFS salaries
+                salary_idx = 0
+                away_lineup_salaries = away_lineup_node.find_elements(By.CLASS_NAME, "salaries")
+                away_players = away_lineup_node.find_elements(By.CLASS_NAME, AWAY_TEAM_PLAYER_LABEL)
+                # TODO for some reason, Rotowire doesn't render some of the games, so the DFS salaries are not available
+                if len(away_players) != len(away_lineup_salaries):
+                    print("There are no DFS salaries for matchup " + away_team_abbreviation + " at " + home_team_abbreviation)
+                    continue
+                for away_player in away_players:
+                    salary = int(away_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
+                    salary_idx += 1
+                    away_team_lineup.append(self.get_hitter(away_player, away_team_abbreviation, salary))
+
+                # Get the data on the home lineup with DFS salaries
+                salary_idx = 0
+                home_lineup_salaries = home_lineup_node.find_elements(By.CLASS_NAME, "salaries")
+                home_players = home_lineup_node.find_elements(By.CLASS_NAME, HOME_TEAM_PLAYER_LABEL)
+                for home_player in home_players:
+                    salary = int(home_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
+                    salary_idx += 1
+                    home_team_lineup.append(self.get_hitter(home_player, home_team_abbreviation, salary))
+
+                # Get the data on the pitchers
+                away_pitcher = away_lineup_node.find_element(By.CLASS_NAME, "lineup__player-highlight-name")
+                away_team_pitcher = self.get_pitcher(away_pitcher, away_team_abbreviation, 0)
+                home_pitcher = home_lineup_node.find_element(By.CLASS_NAME, "lineup__player-highlight-name")
+                home_team_pitcher = self.get_pitcher(home_pitcher, home_team_abbreviation, 0)
+
+                current_game = Game(away_team_lineup, away_team_pitcher, home_team_lineup, home_team_pitcher,
+                                    str(game_date), str(game_time))
+
+                games.append(current_game)
+            except NoSuchElementException:
+                continue
+
+        return games
+
+    def get_id(self, web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+        return web_element_node.find_element(By.TAG_NAME, "a").get_attribute("href").split("id=")[1]
+
+    def get_hand_bats(self, web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+        return web_element_node.find_element(By.CLASS_NAME, "lineup__bats").text
+
+    def get_hand_throws(self, web_element_node: selenium.webdriver.remote.webelement.WebElement):
+        return web_element_node.find_element(By.CLASS_NAME, "lineup__throws").text
+
+    def get_hitter(self, web_element_node: selenium.webdriver.remote.webelement.WebElement,
+                   team: str, dfs_salary: int) -> PlayerStruct:
+        rotowire_id = self.get_id(web_element_node)
+        name = web_element_node.find_element(By.TAG_NAME, "a").get_attribute("title")
+        position = web_element_node.find_element(By.CLASS_NAME, POSITION_CLASS_LABEL).text
+        hand = self.get_hand_bats(web_element_node)
+
+        return PlayerStruct(team, rotowire_id, position, hand, name, dfs_salary)
+
+    def get_pitcher(self, web_element_node: selenium.webdriver.remote.webelement.WebElement, team: str,
+                    dfs_salary: int):
+        rotowire_id = self.get_id(web_element_node)
+        hand = self.get_hand_throws(web_element_node)
+        name = web_element_node.find_element(By.TAG_NAME, "a").text
+
+        return PlayerStruct(team, rotowire_id, "P", hand, name, dfs_salary)
+
+
 def get_game_lineups(url=None, game_date=None):
     """ Mine the RotoWire daily lineups page and get the players' name, team, and RotoWire ID
     Commit the GameEntry objects to the database.
@@ -129,10 +241,20 @@ def get_game_lineups(url=None, game_date=None):
             away_lineup_node = main_game_node.find("ul", {"class": "lineup__list is-visit"})
             home_lineup_node = main_game_node.find("ul", {"class": "lineup__list is-home"})
 
+            # TODO the salaries are not enabled by default, so we must use selenium to push the correct buttons
+            salary_idx = 0
+            away_lineup_salaries = away_lineup_node.findAll("li", {"class": "salaries"})
             for away_player in away_lineup_node.findAll("li", {"class": AWAY_TEAM_PLAYER_LABEL}):
-                away_team_lineup.append(get_hitter(away_player, away_team_abbreviation))
+                salary = away_lineup_salaries[salary_idx].text
+                salary_idx += 1
+                away_team_lineup.append(get_hitter(away_player, away_team_abbreviation, salary))
+
+            salary_idx = 0
+            home_lineup_salaries = home_lineup_node.findAll("li", {"class": "salaries"})
             for home_player in home_lineup_node.findAll("li", {"class": HOME_TEAM_PLAYER_LABEL}):
-                home_team_lineup.append(get_hitter(home_player, home_team_abbreviation))
+                salary = home_lineup_salaries[salary_idx].text
+                salary_idx += 1
+                home_team_lineup.append(get_hitter(home_player, home_team_abbreviation, salary))
 
             away_pitcher = away_lineup_node.find("div", {"class": "lineup__player-highlight-name"})
             away_team_pitcher = get_pitcher(away_pitcher, away_team_abbreviation)
@@ -195,7 +317,7 @@ def get_id(soup):
     return soup.find("a").get("href").split("id=")[1]
 
 
-def get_hitter(soup, team):
+def get_hitter(soup: bs4.BeautifulSoup, team: str, dfs_salary: int):
     """ Get a PlayerStruct representing a hitter
     If a database session is not provided, open the player page to obtain the hitter info.
     Otherwise, look for the hitter in the database. If not found, open the player page to obtain the hitter info.
@@ -208,7 +330,7 @@ def get_hitter(soup, team):
     position = soup.find("div", {"class": POSITION_CLASS_LABEL}).text
     hand = get_hand_bats(soup)
 
-    return PlayerStruct(team, rotowire_id, position, hand, name)
+    return PlayerStruct(team, rotowire_id, position, hand, name, dfs_salary)
 
 
 def get_pitcher(soup, team):
