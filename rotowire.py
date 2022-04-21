@@ -104,9 +104,22 @@ class HomeAwayEnum(object):
     HOME = 1
 
 
-class SeleniumMiner(object):
+class SeleniumRotowireMiner(object):
+    """
+    Class used to mine data for upcoming games using Selenium so that it may manipulate the page to get
+    all the necessary data.
+    """
 
     def get_game_lineups(self, url: str = None, game_date: date = None) -> [Game]:
+        """
+        Get the list of Game objects representing all players participating in the games from the input url and date
+        :param url: URL to open with Selenium containing the daily lineups (default is the daily linueps page from today)
+        :type url: str
+        :param game_date: date of the game (default is today)
+        :type game_date: date
+        :return: list of Game objects
+        :rtype: [Game]
+        """
 
         if url is None:
             url = DAILY_LINEUPS_URL
@@ -179,17 +192,52 @@ class SeleniumMiner(object):
 
         return games
 
-    def get_id(self, web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+    @staticmethod
+    def get_id(web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+        """
+        Get the player's unique Rotowire ID
+        :param web_element_node: input element node containing the player data in a lineup
+        :type web_element_node: selenium.webdriver.remote.webelement.WebElement
+        :return: string representation of the player's Rotowire ID
+        :rtype: str
+        """
         return web_element_node.find_element(By.TAG_NAME, "a").get_attribute("href").split("id=")[1]
 
-    def get_hand_bats(self, web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+    @staticmethod
+    def get_hand_bats(web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+        """
+        Get the side of the plate the player hits from ("L" "R" or "S")
+        :param web_element_node: input element node containing the player data in a lineup
+        :type web_element_node: selenium.webdriver.remote.webelement.WebElement
+        :return: string representation of the side of the plate the player hits from
+        :rtype: str
+        """
         return web_element_node.find_element(By.CLASS_NAME, "lineup__bats").text
 
-    def get_hand_throws(self, web_element_node: selenium.webdriver.remote.webelement.WebElement):
+    @staticmethod
+    def get_hand_throws(web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
+        """
+        Get the hand the player uses to throw with ("L" or "R")
+        :param web_element_node: input element node containing the player data in a lineup
+        :type web_element_node: selenium.webdriver.remote.webelement.WebElement
+        :return: string representation of the hand the player throws with
+        :rtype: str
+        """
         return web_element_node.find_element(By.CLASS_NAME, "lineup__throws").text
 
     def get_hitter(self, web_element_node: selenium.webdriver.remote.webelement.WebElement,
                    team: str, dfs_salary: int) -> PlayerStruct:
+        """
+        Aggregate the incoming information about the hitter into a unified structure
+        :param web_element_node: input element node containing the player data in a lineup
+        :type web_element_node: selenium.webdriver.remote.webelement.WebElement
+        :param team: string abbreviation for the team the player is on
+        :type team: str
+        :param dfs_salary: salary the player would theoretically make in a Draftkings contest
+        :type dfs_salary: int
+        :return: aggregate PlayerStruct object of all preliminary information about the hitter
+        :rtype: PlayerStruct
+        """
         rotowire_id = self.get_id(web_element_node)
         name = web_element_node.find_element(By.TAG_NAME, "a").get_attribute("title")
         position = web_element_node.find_element(By.CLASS_NAME, POSITION_CLASS_LABEL).text
@@ -199,6 +247,17 @@ class SeleniumMiner(object):
 
     def get_pitcher(self, web_element_node: selenium.webdriver.remote.webelement.WebElement, team: str,
                     dfs_salary: int):
+        """
+        Aggregate the incoming information about the pitcher into a unified structure
+        :param web_element_node: input element node containing the player data in a lineup
+        :type web_element_node: selenium.webdriver.remote.webelement.WebElement
+        :param team: string abbreviation for the team the player is on
+        :type team: str
+        :param dfs_salary: salary the player would theoretically make in a Draftkings contest
+        :type dfs_salary: int
+        :return: aggregate PlayerStruct object of all preliminary information about the pitcher
+        :rtype: PlayerStruct
+        """
         rotowire_id = self.get_id(web_element_node)
         hand = self.get_hand_throws(web_element_node)
         name = web_element_node.find_element(By.TAG_NAME, "a").text
