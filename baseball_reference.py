@@ -2,12 +2,59 @@
 baseball_reference.py
 Module used for scraping data from baseballreference.com
 """
+import bs4
 
 from beautiful_soup_helper import *
 from datetime import date, timedelta
 
 
 BASE_URL = "http://www.baseball-reference.com"
+
+
+class PlayerIdentifier(object):
+    def __init__(self, name: str, baseball_reference_id: str):
+        self._name = name
+        self._baseball_reference_id = baseball_reference_id
+
+    def get_id(self) -> str:
+        return self._baseball_reference_id
+
+    def get_name(self) -> str:
+        return self._name
+
+
+def get_season_hitter_identifiers(year: int) -> [PlayerIdentifier]:
+    """
+    Given a year, get the name and Baseball Reference ID of all hitters that participated in that year
+    :param year: year of interest
+    :type year: int
+    :return: list of identifiers for a particular player
+    :rtype: [PlayerIdentifier]
+    """
+    soup = get_hitter_soup(year)
+
+    season_hitter_ids = list()
+
+    try:
+        hitter_table = soup.find("table", {"id": "players_standard_batting"})
+        hitter_table = hitter_table.find("tbody")
+        hitter_table_rows = hitter_table.findAll("tr")
+    except AttributeError:
+        return season_hitter_ids
+    for hitter_table_row in hitter_table_rows:
+        if hitter_table_row.get("class")[0] != "thead":
+            try:
+                hitter_entries = hitter_table_row.findAll("td")
+                hitter_name_entry = hitter_entries[0].find("a")
+                hitter_name_entry = hitter_name_entry.text.replace(u'\xa0', ' ')
+                hitter_id = hitter_name_entry.get("href").split("/")
+                season_hitter_ids.append(PlayerIdentifier(hitter_name_entry, hitter_id))
+            except IndexError:
+                continue
+            except AttributeError:
+                continue
+
+    return season_hitter_ids
 
 
 def get_hitter_id(full_name, team, year=None, soup=None):
@@ -49,6 +96,33 @@ def get_hitter_id(full_name, team, year=None, soup=None):
                 continue
 
     raise PlayerNameNotFound(full_name)
+
+
+def get_season_pitcher_identifiers(year: int) -> [PlayerIdentifier]:
+    soup = get_pitcher_soup(year)
+
+    season_pitcher_ids = list()
+
+    try:
+        hitter_table = soup.find("table", {"id": "players_standard_batting"})
+        hitter_table = hitter_table.find("tbody")
+        hitter_table_rows = hitter_table.findAll("tr")
+    except AttributeError:
+        return season_pitcher_ids
+    for pitcher_table_row in hitter_table_rows:
+        if pitcher_table_row.get("class")[0] != "thead":
+            try:
+                pitcher_entries = pitcher_table_row.findAll("td")
+                pitcher_name_entry = pitcher_entries[0].find("a")
+                pitcher_name_entry = pitcher_name_entry.text.replace(u'\xa0', ' ')
+                pitcher_id = pitcher_name_entry.get("href").split("/")
+                season_pitcher_ids.append(PlayerIdentifier(pitcher_name_entry, pitcher_id))
+            except IndexError:
+                continue
+            except AttributeError:
+                continue
+
+    return season_pitcher_ids
 
 
 def get_pitcher_id(full_name, team, year=None, soup=None):
@@ -94,7 +168,7 @@ class PlayerNameNotFound(Exception):
         super(PlayerNameNotFound, self).__init__("Player '%s' not found in the Baseball Reference page" % name_str)
 
 
-def get_hitter_soup(year=None):
+def get_hitter_soup(year: int = None) -> bs4.BeautifulSoup:
     """
     :param year: integer representation of the year of interest (default is current year)
     :return: BeautifulSoup object of the home page for this hitter
@@ -106,7 +180,7 @@ def get_hitter_soup(year=None):
     return get_comment_soup_from_url(hitter_year_url)
 
 
-def get_pitcher_soup(year=None):
+def get_pitcher_soup(year: int = None) -> bs4.BeautifulSoup:
     """
     :param year: integer representation of the year of interest (default is current year)
     :return: BeautifulSoup object of the home page for this pitcher
@@ -176,6 +250,27 @@ def get_vs_table_row_dict(soup, batter_id, pitcher_id):
     return stat_dict
 
 
+def get_all_table_row_dicts(soup: bs4.BeautifulSoup, table_name: str) -> (dict, [dict]):
+    """
+    Get the column header labels as well as all rows in a given table in the given BeautifulSoup object
+    :param soup: BeautifulSoup object containing the table_name table as a child
+    :type soup: bs4.BeautifulSoup
+    :param table_name: name of the table of interest
+    :type table_name: str
+    :return: tuple of column header labels and a list of all rows in a given table
+    :rtype: (dict, [dict])
+    """
+    results_table = soup.find("table", {"id": table_name})
+    if results_table is None:
+        raise TableNotFound(table_name)
+
+    table_header_list = results_table.find("thead").findAll("th")
+    table_header_list = [x.text for x in table_header_list]
+    stat_rows = results_table.findAll("tr")
+
+    return table_header_list, stat_rows
+
+
 def get_table_row_dict(soup, table_name, table_row_label, table_column_label):
     """ Get a dictionary representation of a Baseball Reference table of stats
     :param soup: BeautifulSoup object containing the table HTML
@@ -184,16 +279,11 @@ def get_table_row_dict(soup, table_name, table_row_label, table_column_label):
     :param table_column_label: bare text label for the column of interest
     :return: a dictionary representing the stats
     """
-    results_table = soup.find("table", {"id": table_name})
-    if results_table is None:
-        raise TableNotFound(table_name)
 
     try:
-        table_header_list = results_table.find("thead").findAll("th")
+        table_header_list, stat_rows = get_all_table_row_dicts(soup, table_name)
     except AttributeError:
         raise TableRowNotFound(table_row_label, table_column_label, table_name)
-    table_header_list = [x.text for x in table_header_list]
-    stat_rows = results_table.findAll("tr")
 
     for stat_row in stat_rows:
         # Create a dictionary of the stat attributes
@@ -404,10 +494,26 @@ def get_recent_pitcher_stats(baseball_reference_id, soup=None):
     return table_row_dict
 
 
+def get_season_hitting_game_logs(baseball_reference_id: str, year: int) -> (dict, [dict]):
+    """
+    Get the hitting game logs for an entire season for a given player
+    :param baseball_reference_id: BaseballReference ID for a particular player
+    :type baseball_reference_id: str
+    :param year: year of interest
+    :type year: int
+    :return: column header labels as well as all rows in the hitting game log table
+    :rtype: (dict, [dict])
+    """
+    url = BASE_URL + "/players/gl.fcgi?id=" + str(baseball_reference_id) + "&t=b&year=" + str(year)
+    soup = get_soup_from_url(url)
+    return get_all_table_row_dicts(soup, "batting_gamelogs")
+
+
 def get_hitting_game_log(baseball_reference_id, soup=None, game_date=None):
-    """ Get a dictionary representation of yesterday's game log stats
+    """ Get a dictionary representation of hitting stats for a particular player on a particular day
     :param baseball_reference_id: BaseballReference unique ID for the hitter of interest
     :param soup: BeautifulSoup object of the hitter game log (default is the URL for the game log of the given ID)
+    :param game_date: date of the game of interest (default is today)
     :return: dictionary representation of the game log stats
     """
     if game_date is None:
@@ -418,13 +524,18 @@ def get_hitting_game_log(baseball_reference_id, soup=None, game_date=None):
     try:
         return get_table_row_dict(soup, "batting_gamelogs", date_abbreviations[game_date.month] + " " +
                                   str(game_date.day), "Date")
-    # TODO: just try again for now, explore BeautifulSoup built-in options for this
     except TableNotFound as e:
         print(e)
         return None
     except TableRowNotFound as e1:
         print(e1)
         return None
+
+
+def get_season_pitching_game_logs(baseball_reference_id: str, year: int) -> (dict, [dict]):
+    url = BASE_URL + "/players/gl.fcgi?id=" + str(baseball_reference_id) + "&t=p&year=" + str(year)
+    soup = get_soup_from_url(url)
+    return get_all_table_row_dicts(soup, "pitching-gamelogs")
 
 
 def get_pitching_game_log(baseball_reference_id, soup=None, game_date=None):
@@ -487,6 +598,7 @@ def get_team_info(team_name, year_of_interest=None, team_soup=None):
                     continue
 
     return None, None
+
 
 date_abbreviations = {1: "Jan",
                       2: "Feb",

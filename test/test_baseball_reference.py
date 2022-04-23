@@ -1,5 +1,6 @@
 
 from stat_miner import *
+from baseball_reference import *
 from unittest import TestCase
 
 
@@ -68,6 +69,11 @@ class BaseballReferenceTests(TestCase):
         self.assertAlmostEqual(float(season_stats['WHIP']), 0.923)
         self.assertAlmostEqual(float(season_stats['SO9']), 13.2)
         self.assertAlmostEqual(float(season_stats['SO/W']), 8.46)
+
+    def test_season_hitting_game_log(self):
+        hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2003)
+        season_hitting_stats = get_season_hitting_game_logs(hitter_id, 2003)
+        print("WOW")
 
 
 
