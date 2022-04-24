@@ -46,9 +46,10 @@ def get_season_hitter_identifiers(year: int) -> [PlayerIdentifier]:
             try:
                 hitter_entries = hitter_table_row.findAll("td")
                 hitter_name_entry = hitter_entries[0].find("a")
-                hitter_name_entry = hitter_name_entry.text.replace(u'\xa0', ' ')
+                hitter_name = hitter_name_entry.text.replace(u'\xa0', ' ')
                 hitter_id = hitter_name_entry.get("href").split("/")
-                season_hitter_ids.append(PlayerIdentifier(hitter_name_entry, hitter_id))
+                hitter_id = str(hitter_id[len(hitter_id)-1]).replace(".shtml", "")
+                season_hitter_ids.append(PlayerIdentifier(hitter_name, hitter_id))
             except IndexError:
                 continue
             except AttributeError:
@@ -250,15 +251,15 @@ def get_vs_table_row_dict(soup, batter_id, pitcher_id):
     return stat_dict
 
 
-def get_all_table_row_dicts(soup: bs4.BeautifulSoup, table_name: str) -> (dict, [dict]):
+def get_all_table_row_dicts(soup: bs4.BeautifulSoup, table_name: str) -> [dict]:
     """
     Get the column header labels as well as all rows in a given table in the given BeautifulSoup object
     :param soup: BeautifulSoup object containing the table_name table as a child
     :type soup: bs4.BeautifulSoup
     :param table_name: name of the table of interest
     :type table_name: str
-    :return: tuple of column header labels and a list of all rows in a given table
-    :rtype: (dict, [dict])
+    :return: list of dictionaries of all rows in a given table
+    :rtype: [dict]
     """
     results_table = soup.find("table", {"id": table_name})
     if results_table is None:
@@ -268,7 +269,22 @@ def get_all_table_row_dicts(soup: bs4.BeautifulSoup, table_name: str) -> (dict, 
     table_header_list = [x.text for x in table_header_list]
     stat_rows = results_table.findAll("tr")
 
-    return table_header_list, stat_rows
+    stat_dict_list = list()
+    for stat_row in stat_rows:
+        # Create a dictionary of the stat attributes
+        stat_dict = dict()
+        stat_entries = stat_row.findAll(["th", "td"])
+        # The dictionary does not have valid entries, move on to the next row
+        if len(stat_entries) != len(table_header_list):
+            continue
+        for i in range(1, len(stat_entries)):
+            if stat_entries[i].text == "" or stat_entries[i].name != "td":
+                stat_dict[table_header_list[i]] = 0
+            else:
+                stat_dict[table_header_list[i]] = stat_entries[i].text.replace(u"\xa0", " ")
+        stat_dict_list.append(stat_dict)
+
+    return stat_dict_list
 
 
 def get_table_row_dict(soup, table_name, table_row_label, table_column_label):
