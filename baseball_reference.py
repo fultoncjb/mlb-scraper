@@ -105,19 +105,20 @@ def get_season_pitcher_identifiers(year: int) -> [PlayerIdentifier]:
     season_pitcher_ids = list()
 
     try:
-        hitter_table = soup.find("table", {"id": "players_standard_batting"})
-        hitter_table = hitter_table.find("tbody")
-        hitter_table_rows = hitter_table.findAll("tr")
+        pitcher_table = soup.find("table", {"id": "players_standard_pitching"})
+        pitcher_table = pitcher_table.find("tbody")
+        pitcher_table_rows = pitcher_table.findAll("tr")
     except AttributeError:
         return season_pitcher_ids
-    for pitcher_table_row in hitter_table_rows:
+    for pitcher_table_row in pitcher_table_rows:
         if pitcher_table_row.get("class")[0] != "thead":
             try:
                 pitcher_entries = pitcher_table_row.findAll("td")
                 pitcher_name_entry = pitcher_entries[0].find("a")
-                pitcher_name_entry = pitcher_name_entry.text.replace(u'\xa0', ' ')
+                pitcher_name = pitcher_name_entry.text.replace(u'\xa0', ' ')
                 pitcher_id = pitcher_name_entry.get("href").split("/")
-                season_pitcher_ids.append(PlayerIdentifier(pitcher_name_entry, pitcher_id))
+                pitcher_id = str(pitcher_id[len(pitcher_id) - 1]).replace(".shtml", "")
+                season_pitcher_ids.append(PlayerIdentifier(pitcher_name, pitcher_id))
             except IndexError:
                 continue
             except AttributeError:
@@ -551,7 +552,7 @@ def get_hitting_game_log(baseball_reference_id, soup=None, game_date=None):
 def get_season_pitching_game_logs(baseball_reference_id: str, year: int) -> (dict, [dict]):
     url = BASE_URL + "/players/gl.fcgi?id=" + str(baseball_reference_id) + "&t=p&year=" + str(year)
     soup = get_soup_from_url(url)
-    return get_all_table_row_dicts(soup, "pitching-gamelogs")
+    return get_all_table_row_dicts(soup, "pitching_gamelogs")
 
 
 def get_pitching_game_log(baseball_reference_id, soup=None, game_date=None):
