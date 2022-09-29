@@ -58,34 +58,42 @@ def get_csv_dict(filename=None):
     return csv_dict
 
 
-def get_hitter_points(postgame_hitter):
+def get_hitter_points(stat_dict: dict) -> float:
     points = float()
-    points += 3*postgame_hitter.game_1b
-    points += 5*postgame_hitter.game_2b
-    points += 8*postgame_hitter.game_3b
-    points += 10*postgame_hitter.game_hr
-    points += 2*postgame_hitter.game_rbi
-    points += 2*postgame_hitter.game_r
-    points += 2*postgame_hitter.game_bb
-    points += 2*postgame_hitter.game_hbp
-    points += 5*postgame_hitter.game_sb
+    points += 5 * float(stat_dict["2B"])
+    points += 8 * float(stat_dict["3B"])
+    points += 10 * float(stat_dict["HR"])
+    points += 2 * float(stat_dict["RBI"])
+    points += 2 * float(stat_dict["R"])
+    points += 2 * float(stat_dict["BB"])
+    points += 2 * float(stat_dict["HBP"])
+    points += 5 * float(stat_dict["SB"])
+    singles = float(stat_dict["H"]) - float(stat_dict["2B"]) - float(stat_dict["3B"]) - float(stat_dict["HR"])
+    points += 3 * singles
 
     return points
 
 
-def get_pitcher_points(postgame_pitcher):
-    points = float()
-    string_ip = str(postgame_pitcher.game_ip)
-    innings_pitched_float = 0.333*float(string_ip.split(".")[1]) + float(string_ip.split(".")[0])
-    points += 2.25*innings_pitched_float
-    points += 2*postgame_pitcher.game_so
-    points += 4*postgame_pitcher.game_wins
-    points -= 2*postgame_pitcher.game_er
-    points -= 0.6*postgame_pitcher.game_h
-    points -= 0.6*postgame_pitcher.game_bb
-    points -= 0.6*postgame_pitcher.game_hbp
-    points += 2.5*postgame_pitcher.game_cg
-    points += 2.5*postgame_pitcher.game_cgso
-    points += 5*postgame_pitcher.game_no_hitter
+def get_pitcher_points(stat_dict: dict) -> float:
+    points = 0.0
+    string_ip = str(stat_dict["IP"])
+    innings_pitched_float = 0.333 * float(string_ip.split(".")[1]) + float(string_ip.split(".")[0])
+    points += 2.25 * innings_pitched_float
+    points += 2 * float(stat_dict["SO"])
+    points += 4 * float(stat_dict["W"])
+    points -= 2 * float(stat_dict["ER"])
+    points -= 0.6 * float(stat_dict["H"])
+    points -= 0.6 * float(stat_dict["BB"])
+    points -= 0.6 * float(stat_dict["HBP"])
+    # TODO may not be great assumptions in here
+    # Complete game
+    if float(stat_dict["CG"]) > 0.0:
+        points += 2.5
+        # Complete game shutout
+        if float(stat_dict["R"]) < 1:
+            points += 2.5
+        # No hitter
+        if float(stat_dict["H"]) < 1:
+            points += 5
 
     return points
