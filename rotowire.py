@@ -20,6 +20,7 @@ from beautiful_soup_helper import get_soup_from_url
 # Daily lineups relevant HTML labels
 DAILY_LINEUPS_URL = "https://www.rotowire.com/baseball/daily-lineups.php"
 GAME_REGION_LABEL = "offset1 span15"
+LINEUP_LABEL = "lineup.is-mlb"
 TEAM_REGION_LABEL = "lineup__main"
 AWAY_TEAM_REGION_LABEL = "lineup__list is-visit"
 HOME_TEAM_REGION_LABEL = "lineup__list is-home"
@@ -130,6 +131,12 @@ class SeleniumRotowireMiner(object):
         # Open the page and show the Draftkings salaries
         browser = webdriver.Firefox()
         browser.get(url)
+
+        # Close promotional modal
+        # TODO need a way of trying this and moving on if it doesn't exist after a certain amount of time
+        modal_dismiss_button = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.ID, "close-vwo-ps-modal")))
+        modal_dismiss_button.click()
+
         dfs_show_salaries_node = browser.find_element(By.XPATH, "//div[@data-name='lineups-mlb-showsalaries']")
         # TODO this isn't necessarily correct because this won't be the class name if the
         dfs_yes_button = WebDriverWait(dfs_show_salaries_node, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "toggle-tab")))
@@ -138,44 +145,49 @@ class SeleniumRotowireMiner(object):
         # show_display_settings_button = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "revealer btn soft size-1 pad-2")))
         # show_display_settings_button.click()
 
-        lineups_header_nodes = browser.find_elements(By.CLASS_NAME, TEAM_REGION_LABEL)
+        lineup_nodes = browser.find_elements(By.CLASS_NAME, LINEUP_LABEL)
         games = list()
-        for lineup_header in lineups_header_nodes:
+        for lineup_node in lineup_nodes:
             home_team_lineup = list()
             away_team_lineup = list()
             try:
-                game_node = lineup_header.find_element(By.XPATH, "./..")
-                lineup_top = game_node.find_element(By.CLASS_NAME, "lineup__top")
+                lineup_top = lineup_node.find_element(By.CLASS_NAME, "lineup__top")
                 away_team_abbreviation = lineup_top.find_element(By.XPATH, ".//div[@class='lineup__team is-visit']").find_element(By.XPATH, ".//div[@class='lineup__abbr']").get_attribute("innerHTML")
                 home_team_abbreviation = lineup_top.find_element(By.XPATH, ".//div[@class='lineup__team is-home']").find_element(By.XPATH, ".//div[@class='lineup__abbr']").get_attribute("innerHTML")
-                game_time = game_node.parent.find_element(By.CLASS_NAME, "lineup__time").text.replace("ET", "").strip()
+                game_time = lineup_node.find_element(By.CLASS_NAME, "lineup__time").text.replace("ET", "").strip()
+                if len(game_time) == 0:
+                    print("WARNING: game date could not be parsed! Ignoring game between " + away_team_abbreviation + " and " + home_team_abbreviation)
+                    continue
+
                 game_time = datetime.strptime(game_time, '%I:%M %p').strftime("%H:%M")
 
-                main_game_node = game_node.find_element(By.CLASS_NAME, "lineup__main")
+                main_game_node = lineup_node.find_element(By.CLASS_NAME, "lineup__main")
                 away_lineup_node = main_game_node.find_element(By.XPATH, ".//ul[@class='lineup__list is-visit']")
                 home_lineup_node = main_game_node.find_element(By.XPATH, ".//ul[@class='lineup__list is-home']")
 
                 # Get the data on the away lineup with DFS salaries
-                salary_idx = 0
-                away_lineup_salaries = away_lineup_node.find_elements(By.CLASS_NAME, "salaries")
+                # salary_idx = 0
+                # away_lineup_salaries = away_lineup_node.find_elements(By.CLASS_NAME, "salaries")
                 away_players = away_lineup_node.find_elements(By.CLASS_NAME, AWAY_TEAM_PLAYER_LABEL)
                 # TODO for some reason, Rotowire doesn't render some of the games, so the DFS salaries are not available
-                if len(away_players) != len(away_lineup_salaries):
-                    print("There are no DFS salaries for matchup " + away_team_abbreviation + " at " + home_team_abbreviation)
-                    continue
+                # if len(away_players) != len(away_lineup_salaries):
+                #     print("There are no DFS salaries for matchup " + away_team_abbreviation + " at " + home_team_abbreviation)
+                #     continue
                 for away_player in away_players:
-                    salary = int(away_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
-                    salary_idx += 1
-                    away_team_lineup.append(self.get_hitter(away_player, away_team_abbreviation, salary))
+                    # salary = int(away_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
+                    # salary_idx += 1
+                    away_team_lineup.append(self.get_hitter(away_player, away_team_abbreviation, 0))
+                    # away_team_lineup.append(self.get_hitter(away_player, away_team_abbreviation, salary))
 
                 # Get the data on the home lineup with DFS salaries
-                salary_idx = 0
-                home_lineup_salaries = home_lineup_node.find_elements(By.CLASS_NAME, "salaries")
+                # salary_idx = 0
+                # home_lineup_salaries = home_lineup_node.find_elements(By.CLASS_NAME, "salaries")
                 home_players = home_lineup_node.find_elements(By.CLASS_NAME, HOME_TEAM_PLAYER_LABEL)
                 for home_player in home_players:
-                    salary = int(home_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
-                    salary_idx += 1
-                    home_team_lineup.append(self.get_hitter(home_player, home_team_abbreviation, salary))
+                    # salary = int(home_lineup_salaries[salary_idx].text.replace('$', '').replace(',', ''))
+                    # salary_idx += 1
+                    home_team_lineup.append(self.get_hitter(home_player, home_team_abbreviation, 0))
+                    # home_team_lineup.append(self.get_hitter(home_player, home_team_abbreviation, salary))
 
                 # Get the data on the pitchers
                 away_pitcher = away_lineup_node.find_element(By.CLASS_NAME, "lineup__player-highlight-name")
@@ -201,7 +213,7 @@ class SeleniumRotowireMiner(object):
         :return: string representation of the player's Rotowire ID
         :rtype: str
         """
-        return web_element_node.find_element(By.TAG_NAME, "a").get_attribute("href").split("id=")[1]
+        return web_element_node.find_element(By.TAG_NAME, "a").get_attribute("href").split("/")[-1].split("-")[-1]
 
     @staticmethod
     def get_hand_bats(web_element_node: selenium.webdriver.remote.webelement.WebElement) -> str:
@@ -432,6 +444,7 @@ def get_name_from_id(rotowire_id):
     player_soup = get_soup_from_url(PLAYER_PAGE_BASE_URL + str(rotowire_id))
     return player_soup.find("div", {"class": PLAYER_PAGE_LABEL}).find("h1").text.strip()
 
+
 class HitterNotFound(Exception):
     def __init__(self, id_str):
         super(HitterNotFound, self).__init__("Hitter '%s' not found in the database" % id_str)
@@ -440,6 +453,7 @@ class HitterNotFound(Exception):
 class PitcherNotFound(Exception):
     def __init__(self, id_str):
         super(PitcherNotFound, self).__init__("Pitcher '%s' not found in the database" % id_str)
+
 
 def table_entry_to_int(entry):
     return int(entry.replace(",", ""))
