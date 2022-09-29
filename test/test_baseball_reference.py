@@ -1,6 +1,8 @@
 
 from stat_miner import *
+from baseball_reference import *
 from unittest import TestCase
+import functools
 
 
 class BaseballReferenceTests(TestCase):
@@ -68,6 +70,35 @@ class BaseballReferenceTests(TestCase):
         self.assertAlmostEqual(float(season_stats['WHIP']), 0.923)
         self.assertAlmostEqual(float(season_stats['SO9']), 13.2)
         self.assertAlmostEqual(float(season_stats['SO/W']), 8.46)
+
+    def test_get_career_hitting_stats(self):
+        hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2003)
+        hitter_miner = HitterMiner(hitter_id)
+        career_stats = hitter_miner.mine_career_stats()
+        self.assertEqual(int(career_stats['G']), 2408 + 85)
+        self.assertEqual(int(career_stats['PA']), 10091 + 369)
+        self.assertEqual(int(career_stats['AB']), 8640 + 304)
+        self.assertEqual(int(career_stats['R']), 1419 + 51)
+        self.assertEqual(int(career_stats['H']), 2472 + 88)
+        self.assertEqual(int(career_stats['2B']), 632 + 22)
+        self.assertEqual(int(career_stats['3B']), 19 + 2)
+        self.assertEqual(int(career_stats['HR']), 541 + 17)
+        self.assertEqual(int(career_stats['RBI']), 1768 + 61)
+        self.assertEqual(int(career_stats['SB']), 17 + 0)
+        self.assertEqual(int(career_stats['CS']), 9 + 1)
+        self.assertEqual(int(career_stats['BB']), 1319 + 59)
+        self.assertEqual(int(career_stats['SO']), 1750 + 72)
+        self.assertEqual(int(career_stats['TB']), 4765 + 165)
+        self.assertEqual(int(career_stats['GDP']), 236 + 4)
+        self.assertEqual(int(career_stats['HBP']), 38 + 2)
+        self.assertEqual(int(career_stats['SH']), 2 + 0)
+        self.assertEqual(int(career_stats['SF']), 92 + 4)
+        self.assertEqual(int(career_stats['IBB']), 209 + 11)
+
+    def test_season_hitting_game_log(self):
+        hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2003)
+        season_hitting_stats = get_season_hitting_game_logs(hitter_id, 2003)
+        self.assertTrue(len(season_hitting_stats) > 0)
 
 
 
