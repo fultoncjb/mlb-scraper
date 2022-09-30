@@ -65,6 +65,37 @@ baseball_reference_team_dict = bidict.bidict(ARI="Arizona Diamondbacks",
                           TOR="Toronto Blue Jays",
                           WSN="Washington Nationals")
 
+fan_graph_team_dict = bidict.bidict(ARI="diamondbacks",
+                                    ATL="braves",
+                                    BAL="orioles",
+                                    BOS="red-sox",
+                                    CHC="cubs",
+                                    CHW="white-sox",
+                                    CIN="reds",
+                                    CLE="guardians",
+                                    COL="rockies",
+                                    DET="tigers",
+                                    HOU="astros",
+                                    KCR="royals",
+                                    LAA="angels",
+                                    LAD="dodgers",
+                                    MIA="marlins",
+                                    MIL="brewers",
+                                    MIN="twins",
+                                    NYM="mets",
+                                    NYY="yankees",
+                                    OAK="athletics",
+                                    PHI="phillies",
+                                    PIT="pirates",
+                                    SDP="padres",
+                                    SEA="mariners",
+                                    SFG="giants",
+                                    STL="cardinals",
+                                    TBR="rays",
+                                    TEX="rangers",
+                                    TOR="blue-jays",
+                                    WSN="nationals")
+
 
 def get_baseball_reference_team(full_team_name):
     """
