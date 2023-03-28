@@ -3,6 +3,8 @@ mlb-scraper is a Python package for scraping MLB Stats. The package makes heavy 
 
 [![Build Status](https://app.travis-ci.com/fultoncjb/mlb-scraper.svg?branch=master)](https://app.travis-ci.com/fultoncjb/mlb-scraper)
 
+Note: BaseballReference now monitors their traffic pretty diligently, so be sure to throttle any requests substantially.
+
 #### Support
 
 Buy me a coffee to acclerate further development
