@@ -1,8 +1,8 @@
 
 from stat_miner import *
-from baseball_reference import *
 import unittest
 import sys
+from stathead import *
 
 
 class StatheadTests(unittest.TestCase):
