@@ -133,7 +133,6 @@ class SeleniumRotowireMiner(object):
         browser.get(url)
 
         # Close promotional modal
-        # TODO need a way of trying this and moving on if it doesn't exist after a certain amount of time
         try:
             modal_dismiss_button = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.ID, "close-vwo-ps-modal")))
             modal_dismiss_button.click()
