@@ -49,6 +49,20 @@ class StatheadTests(unittest.TestCase):
                                 hitter_id)
         self.assertEqual(num_rbis, 0)
 
+    def test_get_season_hitter_identifiers(self):
+        """
+        Get the season hitter identifiers and verify the count is correct and verify the content of the
+        first and last element
+        """
+        hitter_ids = get_season_hitter_identifiers(2022, (StatheadTests.USERNAME, StatheadTests.PASSWORD))
+        self.assertEqual(len(hitter_ids), 200)
+        self.assertEqual(hitter_ids[0].get_id(), "judgeaa01")
+        self.assertEqual(hitter_ids[0].get_team(), "NYY")
+        self.assertEqual(hitter_ids[0].get_name(), "Aaron Judge")
+        self.assertEqual(hitter_ids[-1].get_id(), "pasquvi01")
+        self.assertEqual(hitter_ids[-1].get_team(), "KCR")
+        self.assertEqual(hitter_ids[-1].get_name(), "Vinnie Pasquantino")
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

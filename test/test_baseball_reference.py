@@ -98,7 +98,7 @@ class BaseballReferenceTests(TestCase):
     def test_season_hitting_game_log(self):
         hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2003)
         season_hitting_stats = get_season_hitting_game_logs(hitter_id, 2003)
-        self.assertTrue(len(season_hitting_stats) > 0)
+        self.assertTrue(len(season_hitting_stats[1]) > 0)
 
 
 

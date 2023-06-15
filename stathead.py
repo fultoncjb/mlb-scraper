@@ -294,6 +294,37 @@ def get_hitter_id(full_name, team, browser: selenium.webdriver.Firefox, year=Non
     bio_stat_dropdown.select_by_visible_text("Name Starts/Ends With")
 
 
+def get_season_hitter_identifiers(year_start: int,  credentials: (str, str) = None,
+                                  browser: selenium.webdriver.Firefox = None, year_end: int = None):
+    if year_end is None:
+        year_end = year_start
+
+    url = "https://stathead.com/baseball/player-batting-season-finder.cgi?request=1&year_min=%i&year_max=%i" % (year_start, year_end)
+
+    if browser is None:
+        browser = login_stathead(credentials)
+    browser.get(url)
+
+    results = browser.find_element(By.ID, "all_stathead_results")
+    stats_table = results.find_element(By.ID, "div_stats").find_element(By.TAG_NAME, "tbody")
+    player_rows = stats_table.find_elements(By.TAG_NAME, "tr")
+
+    season_hitter_ids = list()
+    for player_row in player_rows:
+        if player_row.get_attribute("class") != "thead":
+            player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+            player_link = player_name_entry.find_element(By.TAG_NAME, "a")
+            link_text = player_link.get_attribute("href")
+            hitter_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
+            hitter_name = player_link.text
+            # For the team abbrevation, only the team they started the season on is used
+            team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
+
+            season_hitter_ids.append(PlayerIdentifier(hitter_name, hitter_id, team_abbrev))
+
+    return season_hitter_ids
+
+
 
 
 
