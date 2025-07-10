@@ -72,6 +72,18 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(last_hitter_id.get_team(), "KCR")
         self.assertEqual(last_hitter_id.get_name(), "Vinnie Pasquantino")
 
+    def test_get_season_pitcher_identifiers(self):
+        ids = stathead.get_season_pitcher_identifiers(2022, self.get_creds())
+        first_hitter_id = ids[0]
+        self.assertEqual(len(ids), 200)
+        self.assertEqual(first_hitter_id.get_id(), "colege01")
+        self.assertEqual(first_hitter_id.get_team(), "NYY")
+        self.assertEqual(first_hitter_id.get_name(), "Gerrit Cole")
+        last_hitter_id = ids[-1]
+        self.assertEqual(last_hitter_id.get_id(), "romanjo03")
+        self.assertEqual(last_hitter_id.get_team(), "TOR")
+        self.assertEqual(last_hitter_id.get_name(), "Jordan Romano")
+
     def test_get_season_hitting_game_logs(self):
         gamelogs = stathead.get_season_hitting_game_logs("ortiz-001dav", 2004, self.get_creds())
         self.assertEqual(gamelogs.shape[0], 150)
@@ -113,6 +125,39 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(newest_entry['BOP'], 4)
         self.assertEqual(newest_entry['Pos'], 'DH')
         self.assertEqual(newest_entry['IsHome'], False)
+
+    def test_get_season_pitching_game_logs(self):
+        gamelogs = stathead.get_season_pitching_game_logs("martin004ped", 1999, self.get_creds())
+        self.assertEqual(gamelogs.shape[0], 31)
+        newest_date = gamelogs['Date'].max()
+        newest_entry = gamelogs[gamelogs['Date'] == newest_date].iloc[0]
+        keys = ['Rk', 'Player', 'Date', 'Age', 'Team', 'Opp', 'Result', 'App,Dec', 'IP', 'H', 'R', 'ER', 'UER', 'HR', 'BB', 'IBB', 'SO', 'HBP', 'BK', 'WP', 'BF', 'BR', 'Pos']
+        dataframe_keys = gamelogs.columns
+        for key in keys:
+            self.assertTrue(key in dataframe_keys)
+        self.assertEqual(newest_entry['Player'], 'Pedro Martínez')
+        self.assertEqual(newest_entry['Date'], '1999-10-02')
+        self.assertEqual(newest_entry['Age'], '27-342')
+        self.assertEqual(newest_entry['Team'], 'BOS')
+        self.assertEqual(newest_entry['Opp'], 'BAL')
+        self.assertEqual(newest_entry['Result'], 'W, 8-0')
+        self.assertEqual(newest_entry['App,Dec'], '7-7')
+        self.assertEqual(newest_entry['IP'], 1.0)
+        self.assertEqual(newest_entry['H'], 0)
+        self.assertEqual(newest_entry['R'], 0)
+        self.assertEqual(newest_entry['ER'], 0)
+        self.assertEqual(newest_entry['UER'], 0)
+        self.assertEqual(newest_entry['HR'], 0)
+        self.assertEqual(newest_entry['BB'], 0)
+        self.assertEqual(newest_entry['IBB'], 0)
+        self.assertEqual(newest_entry['SO'], 1)
+        self.assertEqual(newest_entry['HBP'], 1)
+        self.assertEqual(newest_entry['BK'], 0)
+        self.assertEqual(newest_entry['WP'], 0)
+        self.assertEqual(newest_entry['BF'], 3)
+        self.assertEqual(newest_entry['BR'], 1)
+        self.assertEqual(newest_entry['Pos'], 'P')
+
 
     def test_get_career_hitting_stats(self):
         hitting_stats = stathead.get_career_hitting_stats("ramirma02", "Manny Ramirez", False, self.get_creds())
