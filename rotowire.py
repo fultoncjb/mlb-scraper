@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from time import sleep
 
 from team_dict import *
 from baseball_reference import get_team_info, TableNotFound
@@ -147,6 +148,10 @@ class SeleniumRotowireMiner(object):
         # TODO may also want to click the button determining whether the started games are hidden or not
         # show_display_settings_button = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "revealer btn soft size-1 pad-2")))
         # show_display_settings_button.click()
+
+        # Sleep for 10 seconds to allow the user to provide some input
+        # TODO this is pretty hacky
+        sleep(10)
 
         lineup_nodes = browser.find_elements(By.CLASS_NAME, LINEUP_LABEL)
         games = list()

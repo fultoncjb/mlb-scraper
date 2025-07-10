@@ -7,6 +7,7 @@ from rotowire import *
 from multiprocessing import Pool
 from team_dict import *
 from baseball_reference import *
+from stathead import get_hitter_id
 
 
 class NoGamesFound(Exception):
@@ -52,6 +53,9 @@ class HitterMiner(object):
     @staticmethod
     def get_id(full_name, team_abbreviation, year):
         return get_hitter_id(full_name, team_abbreviation, year)
+
+    def get_stathead_id(self):
+        return get_stathead_id(self._baseball_reference_id)
 
     def mine_career_stats(self, hitter_career_soup=None):
         return get_career_hitting_stats(self._baseball_reference_id, hitter_career_soup)
