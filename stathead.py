@@ -361,7 +361,7 @@ def get_season_hitter_identifiers_and_pa(year_start: int,  credentials: (str, st
     return season_hitter_ids
 
 
-def get_season_pitcher_identifiers(year_start: int,  credentials: (str, str),
+def get_season_pitcher_identifiers_and_bf(year_start: int,  credentials: (str, str),
                                   browser: selenium.webdriver.Firefox = None, year_end: int = None):
     # TODO this does not take into account all the players since there are multiple pages
     if year_end is None:
@@ -387,8 +387,9 @@ def get_season_pitcher_identifiers(year_start: int,  credentials: (str, str),
             name = player_link.text
             # For the team abbreviation, only the team they started the season on is used
             team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
+            batters_faced = int(player_row.find_element(By.XPATH, ".//td[@data-stat='p_bfp']").text)
 
-            ids.append(PlayerIdentifier(name, player_id, team_abbrev))
+            ids.append((PlayerIdentifier(name, player_id, team_abbrev), batters_faced))
 
     return ids
 
