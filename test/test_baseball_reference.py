@@ -98,7 +98,43 @@ class BaseballReferenceTests(TestCase):
     def test_season_hitting_game_log(self):
         hitter_id = HitterMiner.get_id("David Ortiz", "BOS", 2003)
         season_hitting_stats = get_season_hitting_game_logs(hitter_id, 2003)
-        self.assertTrue(len(season_hitting_stats) > 0)
+        self.assertTrue(len(season_hitting_stats[1]) > 0)
+
+    def test_get_bat_throws(self):
+        player_hand_info = get_bats_throws("varitja01")
+        self.assertEqual(player_hand_info.bats, Hand.SWITCH)
+        self.assertEqual(player_hand_info.throws, Hand.RIGHT)
+
+    def test_ballpark_factors(self):
+        bp_factors = get_ballpack_factors("NYY", 2021)
+        self.assertEqual(bp_factors.hitter, 100)
+        self.assertEqual(bp_factors.pitcher, 99)
+
+    def test_get_stathead_id(self):
+        retro_id = get_stathead_id("abreubo01")
+        self.assertEqual(retro_id, "abreu-001bob")
+        retro_id = get_stathead_id("ramirma02")
+        self.assertEqual(retro_id, "ramire002man")
+        retro_id = get_stathead_id("aardsda01")
+        self.assertEqual(retro_id, "aardsm001dav")
+
+    def test_get_season_hitter_ids(self):
+        season = 2023
+        season_hitter_ids = get_season_hitter_identifiers(season)
+
+        # Check the first batter
+        matt_olson_id = season_hitter_ids[0]
+        self.assertEqual(matt_olson_id.get_name(), "Matt Olson")
+        self.assertEqual(matt_olson_id.get_id(), "olsonma02")
+        self.assertEqual(matt_olson_id.get_team(), "ATL")
+
+        # Check the last batter
+        jacob_young_id = season_hitter_ids[-1]
+        self.assertEqual(jacob_young_id.get_name(), "Jacob Young")
+        self.assertEqual(jacob_young_id.get_id(), "youngja03")
+        self.assertEqual(jacob_young_id.get_team(), "WSN")
+
+
 
 
 

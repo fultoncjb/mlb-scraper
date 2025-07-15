@@ -1,2 +1,5 @@
 *.pyc
 .idea/*
+build/
+*.log
+*.egg-info/

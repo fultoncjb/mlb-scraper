@@ -5,6 +5,10 @@ Module used for scraping data from baseballreference.com
 import datetime
 
 import bs4
+import re
+from enum import Enum
+from time import sleep
+import bidict
 
 from beautiful_soup_helper import *
 from datetime import date, timedelta
@@ -12,6 +16,29 @@ from datetime import date, timedelta
 BASE_URL = "http://www.baseball-reference.com"
 HITTER_RELEVANT_STAT_KEYS = ["G", "PA", "AB", "R", "H", "2B", "3B", "HR", "RBI", "SB", "CS", "BB", "SO", "TB",
                              "GDP", "HBP", "SH", "SF", "IBB"]
+
+
+class Hand(Enum):
+    LEFT = 1
+    RIGHT = 2
+    SWITCH = 3
+
+
+class PlayerHandInformation(object):
+    def __init__(self, bats: Hand, throws: Hand):
+        self.bats = bats
+        self.throws = throws
+
+
+class BallparkFactors(object):
+    def __init__(self, hitter: int, pitcher: int):
+        self.hitter = hitter
+        self.pitcher = pitcher
+
+
+HAND_TRANSLATION_DICT = bidict.bidict(left=Hand.LEFT,
+                                      right=Hand.RIGHT,
+                                      both=Hand.SWITCH)
 
 
 class PlayerIdentifier(object):
@@ -33,6 +60,19 @@ class PlayerIdentifier(object):
         return self._team_abbrev
 
 
+class HandedPlayerIdentifier(PlayerIdentifier):
+    def __init__(self, name: str, baseball_reference_id: str, team_abbrev: str, bats: Hand, throws: Hand):
+        super(HandedPlayerIdentifier, self).__init__(name, baseball_reference_id, team_abbrev)
+        self._bats = bats
+        self._throws = throws
+
+    def get_bats(self) -> Hand:
+        return self._bats
+
+    def get_throws(self) -> Hand:
+        return self._throws
+
+
 def get_hitter_empty_stats() -> dict:
     return {key: 0.0 for key in HITTER_RELEVANT_STAT_KEYS}
 
@@ -42,6 +82,8 @@ def get_season_hitter_identifiers(year: int) -> [PlayerIdentifier]:
     Given a year, get the name and Baseball Reference ID of all hitters that participated in that year
     :param year: year of interest
     :type year: int
+    :param sleep_length: amount of time to sleep (in seconds) in between queries for a player's hand characteristics
+    :type sleep_length: float
     :return: list of identifiers for a particular player
     :rtype: [PlayerIdentifier]
     """
@@ -56,21 +98,27 @@ def get_season_hitter_identifiers(year: int) -> [PlayerIdentifier]:
     except AttributeError:
         return season_hitter_ids
     for hitter_table_row in hitter_table_rows:
-        if hitter_table_row.get("class")[0] != "thead":
-            try:
-                hitter_name_entry = hitter_table_row.find("td", {"data-stat": "player"}).find("a")
-                hitter_name = hitter_name_entry.text.replace(u'\xa0', ' ')
-                hitter_id = hitter_name_entry.get("href").split("/")
-                hitter_id = str(hitter_id[len(hitter_id)-1]).replace(".shtml", "")
-                team_entry = hitter_table_row.find("td", {"data-stat": "team_ID"}).find("a")
-                team_abbrev = team_entry.get("href").split("/")[2]
-                season_hitter_ids.append(PlayerIdentifier(hitter_name, hitter_id, team_abbrev))
-            except IndexError:
-                continue
-            except AttributeError:
-                continue
+        try:
+            hitter_name_entry = hitter_table_row.find("td", {"data-stat": "name_display"}).find("a")
+            hitter_name = hitter_name_entry.text.replace(u'\xa0', ' ')
+            hitter_id = hitter_name_entry.get("href").split("/")
+            hitter_id = str(hitter_id[len(hitter_id)-1]).replace(".shtml", "")
+            team_entry = hitter_table_row.find("td", {"data-stat": "team_name_abbr"}).find("a")
+            team_abbrev = team_entry.get("href").split("/")[2]
+
+            season_hitter_ids.append(PlayerIdentifier(hitter_name, hitter_id, team_abbrev))
+        except IndexError:
+            continue
+        except AttributeError:
+            continue
 
     return season_hitter_ids
+
+
+def append_hands_to_id(player_id: PlayerIdentifier) -> HandedPlayerIdentifier:
+    bats_throws = get_bats_throws(player_id.get_id())
+    return HandedPlayerIdentifier(player_id.get_name(), player_id.get_id(), player_id.get_team(),
+                                  bats_throws.bats, bats_throws.throws)
 
 
 def get_hitter_id(full_name, team, year=None, soup=None):
@@ -114,7 +162,7 @@ def get_hitter_id(full_name, team, year=None, soup=None):
     raise PlayerNameNotFound(full_name)
 
 
-def get_season_pitcher_identifiers(year: int) -> [PlayerIdentifier]:
+def get_season_pitcher_identifiers(year: int, sleep_length: float = 10.0) -> [HandedPlayerIdentifier]:
     soup = get_pitcher_soup(year)
 
     season_pitcher_ids = list()
@@ -135,7 +183,10 @@ def get_season_pitcher_identifiers(year: int) -> [PlayerIdentifier]:
                 pitcher_id = str(pitcher_id[len(pitcher_id) - 1]).replace(".shtml", "")
                 team_entry = pitcher_table_row.find("td", {"data-stat": "team_ID"}).find("a")
                 team_abbrev = team_entry.get("href").split("/")[2]
-                season_pitcher_ids.append(PlayerIdentifier(pitcher_name, pitcher_id, team_abbrev))
+                bats_throws = get_bats_throws(pitcher_id)
+                sleep(sleep_length)
+                season_pitcher_ids.append(HandedPlayerIdentifier(pitcher_name, pitcher_id, team_abbrev,
+                                                                 bats_throws.bats, bats_throws.throws))
             except IndexError:
                 continue
             except AttributeError:
@@ -196,7 +247,7 @@ def get_hitter_soup(year: int = None) -> bs4.BeautifulSoup:
         year = date.today().year
 
     hitter_year_url = BASE_URL + "/leagues/MLB/" + str(year) + "-standard-batting.shtml"
-    return get_comment_soup_from_url(hitter_year_url)
+    return get_soup_from_url(hitter_year_url)
 
 
 def get_pitcher_soup(year: int = None) -> bs4.BeautifulSoup:
@@ -679,4 +730,53 @@ def get_team_info(team_name, year_of_interest=None, team_soup=None):
 
     return None, None
 
+
+def get_bats_throws(baseball_reference_id: str) -> PlayerHandInformation:
+    url = BASE_URL + "/players/" + baseball_reference_id[0] + "/" + baseball_reference_id + ".shtml"
+    player_soup = get_soup_from_url(url)
+    player_info = player_soup.find("div", {"id": "info"}).find("div", {"id": "meta"}).findAll("div")[-1]
+    strong_entries = player_info.findAll("strong")
+    bats_text = None
+    throws_text = None
+    for strong_entry in strong_entries:
+        tag_text = strong_entry.text.strip().replace("\n", "").replace("\t", "").replace(" ", "")
+        if tag_text == "Bats:":
+            bats_text = strong_entry.next_sibling.replace("\n", "").replace("\t", "").replace(" ", "").replace("\u2022", "").strip().lower()
+        elif tag_text == "Throws:":
+            throws_text = strong_entry.next_sibling.replace("\n", "").replace("\t", "").replace(" ", "").replace("\u2022", "").strip().lower()
+
+    if bats_text is None or throws_text is None:
+        raise TableNotFound("bats-throws")
+
+    return PlayerHandInformation(bats=HAND_TRANSLATION_DICT[bats_text], throws=HAND_TRANSLATION_DICT[throws_text])
+
+
+def get_ballpack_factors(team: str, year: int) -> BallparkFactors:
+    url = BASE_URL + "/teams/" + team + "/" + str(year) + ".shtml"
+    team_soup = get_soup_from_url(url)
+    try:
+        team_metadata = team_soup.find("div", {"data-template": "Partials/Teams/Summary"}).findAll("strong")
+        for strong_entry in team_metadata:
+            if strong_entry.text == "Multi-year:":
+                batting_pitching = strong_entry.next_sibling.strip().replace("\n", "")
+                re_match = re.match("Batting - ([0-9]*), Pitching - ([0-9]*)", batting_pitching)
+                return BallparkFactors(hitter=int(re_match.group(1)), pitcher=int(re_match.group(2)))
+    except AttributeError:
+        print("Could not find team %s ballpark factor for year %i" % (team, year))
+        pass
+
+    raise TableNotFound("ballpark-factors")
+
+
+def get_stathead_id(baseball_reference_id: str) -> str:
+    url = BASE_URL + "/players/" + baseball_reference_id[0] + "/" + baseball_reference_id + ".shtml"
+    player_soup = get_soup_from_url(url)
+    span_list = player_soup.find("div", {"id": "inner_nav"}).findAll("span")
+    for span in span_list:
+        if "Finders & Advanced Stats" in span.text:
+            for link in span.parent.find("div").find("ul").findAll("li"):
+                if "vs. Pitcher" in link.text or "vs. Batter" in link.text:
+                    link_text = link.find("a").get("href")
+                    re_match = re.match(".*&player_id1=([a-zA-Z0-9-.]*)&", link_text)
+                    return re_match.group(1)
 

@@ -6,12 +6,31 @@ Module used for implementing some wrapper functions for BeautifulSoup
 from bs4 import BeautifulSoup, Comment
 import requests
 from datetime import date
+from time import sleep
 
 
 class Http404Exception(Exception):
 
     def __init__(self, invalid_url):
         super(Http404Exception, self).__init__("Attempt to access invalid URL %s." % invalid_url)
+
+
+class Http429Exception(Exception):
+
+    def __init__(self, url):
+        super(Http429Exception, self).__init__("Rate limit reached when accessing URL %s" % url)
+
+
+class HttpGeneralException(Exception):
+
+    def __init__(self, status_code, url):
+        super(HttpGeneralException, self).__init__("Received bad status code %i for URL %s" % (status_code, url))
+
+
+class Http522Exception(Exception):
+
+    def __init__(self, url):
+        super(Http522Exception, self).__init__("Could not establish TCP connection for URL %s" % url)
 
 
 def str_to_date(date_string):
@@ -35,6 +54,11 @@ def url_to_comment_soup(url):
     if response.status_code == 404:
         print("Attempt to access invalid URL: " + response.url)
         raise Http404Exception(url)
+    elif response.status_code == 429:
+        print("Rate limit reached!")
+        raise Http429Exception(url)
+    elif response.status_code != 200:
+        raise HttpGeneralException(response.status_code, url)
 
     soup_initial = BeautifulSoup(response.text, "lxml")
     soup_comments = soup_initial.findAll(text=lambda text: isinstance(text, Comment))
@@ -55,6 +79,14 @@ def url_to_soup(url):
     if response.status_code == 404:
         print("Attempt to access invalid URL: " + response.url)
         raise Http404Exception(url)
+    elif response.status_code == 429:
+        print("Rate limit reached!")
+        raise Http429Exception(url)
+    elif response.status_code == 522:
+        print("Could not establish TCP comms")
+        raise Http522Exception(url)
+    elif response.status_code != 200:
+        raise HttpGeneralException(response.status_code, url)
 
     return BeautifulSoup(response.text, "lxml")
 
