@@ -140,7 +140,7 @@ class SeleniumRotowireMiner(object):
         except selenium.common.exceptions.TimeoutException:
             print("Did not encounter pop-up modal. Proceeding...")
 
-        main_node = browser.find_element(By.TAG_NAME, "main").find_element(By.XPATH, ".//div[@class='flex-row flex-wrap mb-10']")
+        main_node = browser.find_element(By.TAG_NAME, "main").find_element(By.XPATH, ".//div[@class='flex-row flex-wrap mb-10 gap-8']")
         dfs_show_salaries_node = main_node.find_element(By.XPATH, ".//div[@data-name='lineups-mlb-showsalaries']")
         # TODO this isn't necessarily correct because this won't be the class name if the
         dfs_yes_button = WebDriverWait(dfs_show_salaries_node, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "toggle-tab")))
