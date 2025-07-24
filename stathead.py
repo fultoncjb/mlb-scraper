@@ -445,7 +445,7 @@ def get_career_hitting_stats(baseball_reference_id: str, player_name: str, is_po
 
 def get_season_hitting_game_logs(stathead_id: str, year: int, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
     # TODO they split the season and postseason
-    url = "https://stathead.com/baseball/player-batting-game-finder.cgi?request=1&player_id=%s&timeframe=seasons&year_min=%i&year_max=%i" % (stathead_id, year, year)
+    url = str.format("https://stathead.com/baseball/player-batting-game-finder.cgi?request=1&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp[1]=gt&cstat[1]=b_singles", stathead_id, year, year)
 
     if browser is None:
         browser = login_stathead(credentials)
@@ -503,7 +503,7 @@ def get_season_hitting_game_logs(stathead_id: str, year: int, credentials: (str,
 
 def get_season_pitching_game_logs(stathead_id: str, year: int, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
     # TODO they split the season and postseason
-    url = "https://stathead.com/baseball/player-pitching-game-finder.cgi?request=1&player_id=%s&timeframe=seasons&year_min=%i&year_max=%i" % (stathead_id, year, year)
+    url = str.format("https://stathead.com/baseball/player-pitching-game-finder.cgi?request=1&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp%5B1%5D=gt&cstat%5B1%5D=p_singles", stathead_id, year, year)
 
     if browser is None:
         browser = login_stathead(credentials)

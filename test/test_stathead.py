@@ -156,8 +156,20 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(newest_entry['WP'], 0)
         self.assertEqual(newest_entry['BF'], 3)
         self.assertEqual(newest_entry['BR'], 1)
+        self.assertEqual(newest_entry['AB'], 2)
+        self.assertEqual(newest_entry['1B'], 0)
+        self.assertEqual(newest_entry['2B'], 0)
+        self.assertEqual(newest_entry['3B'], 0)
+        self.assertEqual(newest_entry['SB'], 0)
+        self.assertEqual(newest_entry['CS'], 0)
+        self.assertEqual(newest_entry['PO'], 0)
+        self.assertEqual(newest_entry['TB'], 0)
+        self.assertEqual(newest_entry['TB'], 0)
+        self.assertEqual(newest_entry['GIDP'], 0)
+        self.assertEqual(newest_entry['SH'], 0)
+        self.assertEqual(newest_entry['SF'], 0)
+        self.assertEqual(newest_entry['XBH'], 0)
         self.assertEqual(newest_entry['Pos'], 'P')
-
 
     def test_get_career_hitting_stats(self):
         hitting_stats = stathead.get_career_hitting_stats("ramirma02", "Manny Ramirez", False, self.get_creds())
