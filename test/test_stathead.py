@@ -1,6 +1,5 @@
 import os
 
-from stat_miner import *
 import unittest
 import sys
 import stathead
