@@ -95,7 +95,12 @@ def get_vs_pitcher_gamelogs(hitter_stathead_id: str, hitter_last_name: str, pitc
             switcher_element = main_table.find_element(By.XPATH, ".//div[@data-controls='#switcher_stathead_results_bvp_pa']")
             playoffs_button = WebDriverWait(switcher_element, 5).until(
                 EC.element_to_be_clickable((By.XPATH, ".//a[@data-show='.assoc_stats_bvp_pa_po']")))
-            playoffs_button.click()
+            # There is some bug in Selenium that will cause an exception here, so we attempt to run raw
+            # Javascript to click the button
+            try:
+                playoffs_button.click()
+            except selenium.common.exceptions.ElementNotInteractableException as e:
+                browser.execute_script("arguments[0].click();", playoffs_button)
         table_rows = table.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr")
         for row in table_rows:
             if len(row.get_attribute("class")) == 0:
@@ -330,68 +335,89 @@ def get_hitter_id(full_name, team, browser: selenium.webdriver.Firefox, year=Non
 
 def get_season_hitter_identifiers_and_pa(year_start: int,  credentials: (str, str),
                                   browser: selenium.webdriver.Firefox = None, year_end: int = None):
-    # TODO this does not take into account all the players since there are multiple pages
     if year_end is None:
         year_end = year_start
 
-    url = "https://stathead.com/baseball/player-batting-season-finder.cgi?request=1&year_min=%i&year_max=%i" % (year_start, year_end)
+    url = "https://stathead.com/baseball/player-batting-season-finder.cgi?request=1&order_by=b_pa&year_min=%i&year_max=%i" % (year_start, year_end)
 
     if browser is None:
         browser = login_stathead(credentials)
-    browser.get(url)
-
-    results = browser.find_element(By.ID, "all_stathead_results")
-    stats_table = results.find_element(By.ID, "div_stats").find_element(By.TAG_NAME, "tbody")
-    player_rows = stats_table.find_elements(By.TAG_NAME, "tr")
 
     season_hitter_ids = list()
-    for player_row in player_rows:
-        if player_row.get_attribute("class") != "thead":
-            player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
-            player_link = player_name_entry.find_element(By.TAG_NAME, "a")
-            link_text = player_link.get_attribute("href")
-            hitter_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
-            hitter_name = player_link.text
-            # For the team abbreviation, only the team they started the season on is used
-            team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
-            plate_apperances = int(player_row.find_element(By.XPATH, ".//td[@data-stat='b_pa']").text)
+    i = 0
+    while True:
+        browser.get(str.format("{}&offset={}", url, i * 200))
+        i += 1
+        try:
+            results = browser.find_element(By.ID, "all_stathead_results")
+        except selenium.common.exceptions.NoSuchElementException as e:
+            return season_hitter_ids
+        stats_table = results.find_element(By.ID, "div_stats").find_element(By.TAG_NAME, "tbody")
+        player_rows = stats_table.find_elements(By.TAG_NAME, "tr")
 
-            season_hitter_ids.append((PlayerIdentifier(hitter_name, hitter_id, team_abbrev), plate_apperances))
-
-    return season_hitter_ids
+        for player_row in player_rows:
+            if player_row.get_attribute("class") != "thead":
+                player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                player_link = player_name_entry.find_element(By.TAG_NAME, "a")
+                link_text = player_link.get_attribute("href")
+                hitter_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
+                hitter_name = player_link.text
+                # For the team abbreviation, only the team they started the season on is used
+                team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
+                # Skip any players that don't have any plate appearances
+                try:
+                    plate_apperances = int(player_row.find_element(By.XPATH, ".//td[@data-stat='b_pa']").text)
+                    # Since the results are ordered by plate appearances, we can quit after we hit 0
+                    if plate_apperances > 0:
+                        season_hitter_ids.append((PlayerIdentifier(hitter_name, hitter_id, team_abbrev), plate_apperances))
+                    else:
+                        return season_hitter_ids
+                except ValueError:
+                    return season_hitter_ids
 
 
 def get_season_pitcher_identifiers_and_bf(year_start: int,  credentials: (str, str),
                                   browser: selenium.webdriver.Firefox = None, year_end: int = None):
-    # TODO this does not take into account all the players since there are multiple pages
     if year_end is None:
         year_end = year_start
 
-    url = "https://stathead.com/baseball/player-pitching-season-finder.cgi?request=1&year_min=%i&year_max=%i" % (year_start, year_end)
+    url = "https://stathead.com/baseball/player-pitching-season-finder.cgi?request=1&order_by=p_bfp&year_min=%i&year_max=%i" % (year_start, year_end)
 
     if browser is None:
         browser = login_stathead(credentials)
-    browser.get(url)
-
-    results = browser.find_element(By.ID, "all_stathead_results")
-    stats_table = results.find_element(By.ID, "div_stats").find_element(By.TAG_NAME, "tbody")
-    player_rows = stats_table.find_elements(By.TAG_NAME, "tr")
 
     ids = list()
-    for player_row in player_rows:
-        if player_row.get_attribute("class") != "thead":
-            player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
-            player_link = player_name_entry.find_element(By.TAG_NAME, "a")
-            link_text = player_link.get_attribute("href")
-            player_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
-            name = player_link.text
-            # For the team abbreviation, only the team they started the season on is used
-            team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
-            batters_faced = int(player_row.find_element(By.XPATH, ".//td[@data-stat='p_bfp']").text)
+    i = 0
+    while True:
 
-            ids.append((PlayerIdentifier(name, player_id, team_abbrev), batters_faced))
+        browser.get(str.format("{}&offset={}", url, i * 200))
+        i += 1
+        try:
+            results = browser.find_element(By.ID, "all_stathead_results")
+        except selenium.common.exceptions.NoSuchElementException as e:
+            return ids
 
-    return ids
+        stats_table = results.find_element(By.ID, "div_stats").find_element(By.TAG_NAME, "tbody")
+        player_rows = stats_table.find_elements(By.TAG_NAME, "tr")
+
+        for player_row in player_rows:
+            if player_row.get_attribute("class") != "thead":
+                player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                player_link = player_name_entry.find_element(By.TAG_NAME, "a")
+                link_text = player_link.get_attribute("href")
+                player_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
+                name = player_link.text
+                # For the team abbreviation, only the team they started the season on is used
+                team_abbrev = player_row.find_element(By.XPATH, ".//td[@data-stat='teams_played_for']").text.split(",")[0]
+                # Skip any players that didn't face any batters
+                try:
+                    batters_faced = int(player_row.find_element(By.XPATH, ".//td[@data-stat='p_bfp']").text)
+                    if batters_faced > 0:
+                        ids.append((PlayerIdentifier(name, player_id, team_abbrev), batters_faced))
+                    else:
+                        return ids
+                except ValueError:
+                    return ids
 
 
 def get_career_hitting_stats(baseball_reference_id: str, player_name: str, is_postseason: bool, credentials: (str, str) = None,

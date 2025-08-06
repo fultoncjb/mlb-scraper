@@ -62,26 +62,26 @@ class StatheadTests(unittest.TestCase):
         """
         hitter_ids = stathead.get_season_hitter_identifiers_and_pa(2022, self.get_creds())
         first_hitter_id = hitter_ids[0][0]
-        self.assertEqual(len(hitter_ids), 200)
-        self.assertEqual(first_hitter_id.get_id(), "judgeaa01")
-        self.assertEqual(first_hitter_id.get_team(), "NYY")
-        self.assertEqual(first_hitter_id.get_name(), "Aaron Judge")
+        self.assertEqual(len(hitter_ids), 693)
+        self.assertEqual(first_hitter_id.get_id(), "semiema01")
+        self.assertEqual(first_hitter_id.get_team(), "TEX")
+        self.assertEqual(first_hitter_id.get_name(), "Marcus Semien")
         last_hitter_id = hitter_ids[-1][0]
-        self.assertEqual(last_hitter_id.get_id(), "pasquvi01")
-        self.assertEqual(last_hitter_id.get_team(), "KCR")
-        self.assertEqual(last_hitter_id.get_name(), "Vinnie Pasquantino")
+        self.assertEqual(last_hitter_id.get_id(), "tomka01")
+        self.assertEqual(last_hitter_id.get_team(), "SFG")
+        self.assertEqual(last_hitter_id.get_name(), "Ka'ai Tom")
 
     def test_get_season_pitcher_identifiers(self):
-        ids = stathead.get_season_pitcher_identifiers(2022, self.get_creds())
-        first_hitter_id = ids[0]
-        self.assertEqual(len(ids), 200)
-        self.assertEqual(first_hitter_id.get_id(), "colege01")
-        self.assertEqual(first_hitter_id.get_team(), "NYY")
-        self.assertEqual(first_hitter_id.get_name(), "Gerrit Cole")
-        last_hitter_id = ids[-1]
-        self.assertEqual(last_hitter_id.get_id(), "romanjo03")
-        self.assertEqual(last_hitter_id.get_team(), "TOR")
-        self.assertEqual(last_hitter_id.get_name(), "Jordan Romano")
+        ids = stathead.get_season_pitcher_identifiers_and_bf(2022, self.get_creds())
+        first_hitter_id = ids[0][0]
+        self.assertEqual(len(ids), 871)
+        self.assertEqual(first_hitter_id.get_id(), "alcansa01")
+        self.assertEqual(first_hitter_id.get_team(), "MIA")
+        self.assertEqual(first_hitter_id.get_name(), "Sandy Alcantara")
+        last_hitter_id = ids[-1][0]
+        self.assertEqual(last_hitter_id.get_id(), "gonzama01")
+        self.assertEqual(last_hitter_id.get_team(), "NYY")
+        self.assertEqual(last_hitter_id.get_name(), "Marwin González")
 
     def test_get_season_hitting_game_logs(self):
         gamelogs = stathead.get_season_hitting_game_logs("ortiz-001dav", 2004, self.get_creds())
@@ -205,6 +205,14 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(vs_ids[-1][1], 1)
         self.assertEqual(vs_ids[-1][2], 0)
         self.assertEqual(len(vs_ids), 1224)
+
+    def test_hitter_vs_pitcher_plus_hitter(self):
+        """
+        Test the mining of a hitter versus a pitcher who has also played the field at some point in their career
+        :return:
+        :rtype:
+        """
+        gamelogs = stathead.get_vs_pitcher_gamelogs("chisho000jas", "Chisholm", "lorenz001mic", self.get_creds())
 
 
 if __name__ == "__main__":
