@@ -1,5 +1,7 @@
 
 from dataclasses import dataclass
+
+import pandas as pd
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -22,6 +24,16 @@ class InvalidHeaderValueCount(Exception):
 
     def __str__(self):
         return f"The number of header fields {self.header_count} does not equal the number of value fields {self.value_count} in the table {self.table_name}"
+
+
+def str_to_num(strin: str) -> float | int | str:
+    try:
+        return int(strin)
+    except ValueError:
+        try:
+            return float(strin)
+        except ValueError:
+            return strin
 
 
 def get_park_factors(year: int, browser: selenium.webdriver.Firefox = None) -> {str: ParkFactor}:
@@ -48,3 +60,49 @@ def get_park_factors(year: int, browser: selenium.webdriver.Firefox = None) -> {
         output_dict[table_dict["Team"]] = ParkFactor(id=int(row.get_attribute("data-id")), venue_name=table_dict["Venue"], factor=int(table_dict["Park Factor"]))
 
     return output_dict
+
+
+def get_exit_velocity(year: int, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
+    url = str.format("https://baseballsavant.mlb.com/leaderboard/statcast?type=batter&year={}&position=&team=&min=1&sort=barrels_per_pa&sortDir=desc", year)
+
+    if browser is None:
+        browser = webdriver.Firefox()
+
+    browser.get(url)
+
+    table_name = "evLeaderboard"
+    factors_table = browser.find_element(By.ID, table_name)
+    header = factors_table.find_element(By.TAG_NAME, "thead")
+    sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
+    header_names = [x.text for x in sub_header.find_elements(By.TAG_NAME, "th")]
+
+    # Add the prefix from the line above in the table
+    prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
+    current_col = 0
+    for prefix_header in prefix_headers:
+        colspan = int(prefix_header.get_attribute("colspan"))
+        # There is a bug in Statcast where they don't define the column spans for the final columns correctly, so clamp it
+        if current_col + colspan > len(header_names) - 1:
+            colspan = len(header_names) - current_col
+        if prefix_header.get_attribute("class") == "th-title-header":
+            prefix = prefix_header.text
+            for i in range(current_col, current_col + colspan):
+                header_names[i] = prefix + " " + header_names[i]
+
+        current_col += colspan
+
+    table_body = factors_table.find_element(By.TAG_NAME, "tbody")
+    table_rows = table_body.find_elements(By.CLASS_NAME, "default-table-row   ")
+    output_list = list()
+    for row in table_rows:
+        values = [str_to_num(x.text) for x in row.find_elements(By.TAG_NAME, "td")]
+        if len(values) != len(header_names):
+            raise InvalidHeaderValueCount(len(header_names), len(values), table_name)
+        table_dict = dict(zip(header_names, values))
+        player_names = table_dict["Player"].split(",")
+        table_dict["Player"] = (player_names[1] + " " + player_names[0]).strip()
+        table_dict["Id"] = row.get_attribute("data-id")
+        table_dict.pop("Team")
+        output_list.append(table_dict)
+
+    return pd.DataFrame(output_list)
