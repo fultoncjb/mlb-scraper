@@ -58,11 +58,21 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(stats["SB (2B) Advances vs Avg"][0], 18)
         self.assertEqual(stats["SB (3B) Advances vs Avg"][0], 4)
         self.assertEqual(stats["SB Advance Attempts"][0], 42)
-        self.assertEqual(stats["Id"][0], "682998_2024_109")
+        self.assertEqual(stats["Id"][0], "682998")
 
     def test_hitting_run_value(self):
-        # TODO
-        pass
+        stats = statcast.get_hitter_run_value(2024)
+        self.assertEqual(stats.shape, (300, 11))
+        self.assertEqual(stats["Player"][0], "Aaron Judge")
+        self.assertEqual(stats["PA"][0], 683)
+        # TODO need to fix the presence of the comma
+        # self.assertEqual(stats["Pitches"][0], 2882)
+        self.assertEqual(stats["Runs Heart"][0], 40)
+        self.assertEqual(stats["Runs Shadow"][0], 9)
+        self.assertEqual(stats["Runs Chase"][0], 31)
+        self.assertEqual(stats["Runs Waste"][0], 17)
+        self.assertEqual(stats["Runs All"][0], 97)
+        self.assertEqual(stats["Id"][0], "592450")
 
     def test_pitching_run_value(self):
         # TODO
