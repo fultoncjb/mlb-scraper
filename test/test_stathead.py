@@ -206,6 +206,9 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(vs_ids[-1][2], 0)
         self.assertEqual(len(vs_ids), 1224)
 
+    def test_last_n_days(self):
+        stathead.get_last_n_hitting_game_logs(5, self.get_creds())
+
     def test_hitter_vs_pitcher_plus_hitter(self):
         """
         Test the mining of a hitter versus a pitcher who has also played the field at some point in their career

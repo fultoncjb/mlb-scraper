@@ -1,4 +1,4 @@
-
+import datetime
 from datetime import *
 
 import pandas as pd
@@ -469,9 +469,105 @@ def get_career_hitting_stats(baseball_reference_id: str, player_name: str, is_po
         return {stat: 0 for stat in HITTER_RELEVANT_STAT_KEYS}
 
 
+def parse_hitter_gamelog_row(selenium_row, table_header_names) -> dict | None:
+    # The 'Rk' at-bat counter is a 'th' tag, but there shouldn't be any others
+    header_fields = selenium_row.find_elements(By.TAG_NAME, "th")
+    if len(header_fields) > 1:
+        return None
+    entries = header_fields + selenium_row.find_elements(By.TAG_NAME, "td")
+    if len(entries) != len(table_header_names):
+        return None
+    stat_dict = dict()
+    for i in range(0, len(entries)):
+        table_header_name = table_header_names[i]
+        if len(table_header_name) == 0:
+            table_header_name = "IsHome"
+        try:
+            num = int(entries[i].text)
+            stat_dict[table_header_name] = num
+        except ValueError:
+            try:
+                num = float(entries[i].text)
+                stat_dict[table_header_name] = num
+            except ValueError:
+                if table_header_name == "IsHome":
+                    if entries[i].text == "@":
+                        val = False
+                    else:
+                        val = True
+                else:
+                    if len(entries[i].text) == 0:
+                        val = 0
+                    else:
+                        val = entries[i].text
+                stat_dict[table_header_name] = val
+        if table_header_name == "Player":
+            player_link = entries[i].find_element(By.TAG_NAME, "a").get_attribute("href")
+            match = re.search(r'([^/]+)(?=\.shtml)', player_link)
+            stat_dict["br_id"] = match.group()
+
+    return stat_dict
+
+def get_hitting_game_logs(stathead_id: str, start_date: datetime.date, end_date: datetime.date, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
+    url = str.format("https://stathead.com/baseball/player-batting-game-finder.cgi?request=1&order_by=date&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp[1]=gt&cstat[1]=b_singles", stathead_id, start_date.year, end_date.year)
+
+    if browser is None:
+        browser = login_stathead(credentials)
+    browser.get(url)
+
+    table = browser.find_element(By.ID, "stats")
+    table_header = table.find_element(By.TAG_NAME, "thead")
+    table_header_names = [element.text for element in table_header.find_elements(By.TAG_NAME, "th")]
+    table_body = table.find_element(By.TAG_NAME, "tbody")
+    table_rows = table_body.find_elements(By.TAG_NAME, "tr")
+
+    dict_list = list()
+
+    for row in table_rows:
+        stat_dict = parse_hitter_gamelog_row(row, table_header_names)
+
+        # If the game is within the date range, then add it to the data
+        # If the game is earlier than the start date, then end early since the entries are sorted by date
+        game_date = datetime.strptime(stat_dict["Date"].split()[0], "%Y-%m-%d").date()
+        if start_date <= game_date <= end_date:
+            dict_list.append(stat_dict)
+        if game_date < start_date:
+            break
+
+    return pd.DataFrame(dict_list)
+
+def get_last_n_hitting_game_logs(n_days: int, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
+    base_url = str.format("https://stathead.com/baseball/player-batting-game-finder.cgi?request=1&timeframe=last_n_days&previous_days={}", n_days)
+
+    if browser is None:
+        browser = login_stathead(credentials)
+
+    i = 0
+    dict_list = list()
+    while True:
+        browser.get(str.format("{}&offset={}", base_url, i * 200))
+        i += 1
+        try:
+            _ = browser.find_element(By.ID, "all_stathead_results")
+        except selenium.common.exceptions.NoSuchElementException as e:
+            return pd.DataFrame(dict_list)
+        table = browser.find_element(By.ID, "stats")
+        table_header = table.find_element(By.TAG_NAME, "thead")
+        table_header_names = [element.text for element in table_header.find_elements(By.TAG_NAME, "th")]
+        table_body = table.find_element(By.TAG_NAME, "tbody")
+        table_rows = table_body.find_elements(By.TAG_NAME, "tr")
+        for row in table_rows:
+            stat_dict = parse_hitter_gamelog_row(row, table_header_names)
+            if stat_dict is not None:
+                dict_list.append(stat_dict)
+
 def get_season_hitting_game_logs(stathead_id: str, year: int, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
+    return get_hitting_game_logs(stathead_id, datetime.date(year, 1, 1), datetime.date(year, 12, 31), credentials, browser)
+
+
+def get_pitching_game_logs(stathead_id: str, start_date: datetime.date, end_date: datetime.date, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
     # TODO they split the season and postseason
-    url = str.format("https://stathead.com/baseball/player-batting-game-finder.cgi?request=1&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp[1]=gt&cstat[1]=b_singles", stathead_id, year, year)
+    url = str.format("https://stathead.com/baseball/player-pitching-game-finder.cgi?request=1&order_by=date&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp%5B1%5D=gt&cstat%5B1%5D=p_singles", stathead_id, start_date.year, end_date.year)
 
     if browser is None:
         browser = login_stathead(credentials)
@@ -522,67 +618,20 @@ def get_season_hitting_game_logs(stathead_id: str, year: int, credentials: (str,
                 match = re.search(r'([^/]+)(?=\.shtml)', player_link)
                 stat_dict["br_id"] = match.group()
 
-        dict_list.append(stat_dict)
+        # If the game is within the date range, then add it to the data
+        # If the game is earlier than the start date, then end early since the entries are sorted by date
+        game_date = datetime.strptime(stat_dict["Date"].split()[0], "%Y-%m-%d").date()
+        if start_date <= game_date <= end_date:
+            dict_list.append(stat_dict)
+        if game_date < start_date:
+            break
 
     return pd.DataFrame(dict_list)
 
 
 def get_season_pitching_game_logs(stathead_id: str, year: int, credentials: (str, str) = None, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
-    # TODO they split the season and postseason
-    url = str.format("https://stathead.com/baseball/player-pitching-game-finder.cgi?request=1&player_id={}&timeframe=seasons&year_min={}&year_max={}&ccomp%5B1%5D=gt&cstat%5B1%5D=p_singles", stathead_id, year, year)
-
-    if browser is None:
-        browser = login_stathead(credentials)
-    browser.get(url)
-
-    table = browser.find_element(By.ID, "stats")
-    table_header = table.find_element(By.TAG_NAME, "thead")
-    table_header_names = [element.text for element in table_header.find_elements(By.TAG_NAME, "th")]
-    table_body = table.find_element(By.TAG_NAME, "tbody")
-    table_rows = table_body.find_elements(By.TAG_NAME, "tr")
-
-    dict_list = list()
-
-    for row in table_rows:
-        # The 'Rk' at-bat counter is a 'th' tag, but there shouldn't be any others
-        header_fields = row.find_elements(By.TAG_NAME, "th")
-        if len(header_fields) > 1:
-            continue
-        entries = header_fields + row.find_elements(By.TAG_NAME, "td")
-        if len(entries) != len(table_header_names):
-            continue
-        stat_dict = dict()
-        for i in range(0, len(entries)):
-            table_header_name = table_header_names[i]
-            if len(table_header_name) == 0:
-                table_header_name = "IsHome"
-            try:
-                num = int(entries[i].text)
-                stat_dict[table_header_name] = num
-            except ValueError:
-                try:
-                    num = float(entries[i].text)
-                    stat_dict[table_header_name] = num
-                except ValueError:
-                    if table_header_name == "IsHome":
-                        if entries[i].text == "@":
-                            val = False
-                        else:
-                            val = True
-                    else:
-                        if len(entries[i].text) == 0:
-                            val = 0
-                        else:
-                            val = entries[i].text
-                    stat_dict[table_header_name] = val
-            if table_header_name == "Player":
-                player_link = entries[i].find_element(By.TAG_NAME, "a").get_attribute("href")
-                match = re.search(r'([^/]+)(?=\.shtml)', player_link)
-                stat_dict["br_id"] = match.group()
-
-        dict_list.append(stat_dict)
-
-    return pd.DataFrame(dict_list)
+    return get_pitching_game_logs(stathead_id, datetime.date(year, 1, 1), datetime.date(year, 12, 31), credentials,
+                                 browser)
 
 
 
