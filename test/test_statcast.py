@@ -65,8 +65,7 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(stats.shape, (651, 11))
         self.assertEqual(stats["Player"][0], "Aaron Judge")
         self.assertEqual(stats["PA"][0], 683)
-        # TODO need to fix the presence of the comma
-        # self.assertEqual(stats["Pitches"][0], 2882)
+        self.assertEqual(stats["Pitches"][0], 2882)
         self.assertEqual(stats["Runs Heart"][0], 40)
         self.assertEqual(stats["Runs Shadow"][0], 9)
         self.assertEqual(stats["Runs Chase"][0], 31)
@@ -79,8 +78,7 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(stats.shape, (855, 11))
         self.assertEqual(stats["Player"][0], "Tarik Skubal")
         self.assertEqual(stats["PA"][0], 748)
-        # TODO need to fix the presence of the comma
-        # self.assertEqual(stats["Pitches"][0], 2838)
+        self.assertEqual(stats["Pitches"][0], 2838)
         self.assertEqual(stats["Runs Heart"][0], 29)
         self.assertEqual(stats["Runs Shadow"][0], 31)
         self.assertEqual(stats["Runs Chase"][0], -16)
@@ -89,8 +87,15 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(stats["Id"][0], "669373")
 
     def test_hitting_pitch_arsenal(self):
-        # TODO
-        pass
+        stats = statcast.get_hitter_vs_pitch_arsenal_stats(2024)
+        self.assertEqual(stats.shape, (5400, 19))
+        self.assertEqual(stats["Player"][0], "Aaron Judge")
+        self.assertEqual(stats["Pitch"][0], "FF 4-Seam Fastball")
+        self.assertAlmostEqual(stats["RV/100"][0], 4.6, places=2)
+        self.assertEqual(stats["Run Value"][0], 36)
+        self.assertEqual(stats["Usage Pitches"][0], 778)
+        self.assertEqual(stats["Standard PA"][0], 197)
+        self.assertEqual(stats["Id"][0], "592450")
 
     def test_pitching_pitch_arsenal(self):
         # TODO
