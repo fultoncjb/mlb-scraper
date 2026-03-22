@@ -90,8 +90,9 @@ def get_exit_velocity(year: int, browser: selenium.webdriver.Firefox = None) -> 
             colspan = len(header_names) - current_col
         if prefix_header.get_attribute("class") == "th-title-header":
             prefix = prefix_header.text
-            for i in range(current_col, current_col + colspan):
-                header_names[i] = prefix + " " + header_names[i]
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
 
         current_col += colspan
 
@@ -124,7 +125,7 @@ def get_baserunning_run_value(year: int, browser: selenium.webdriver.Firefox = N
     factors_table = browser.find_element(By.ID, table_name)
     header = factors_table.find_element(By.TAG_NAME, "thead")
     sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
-    header_names = [x.text.replace("\n", " ") for x in sub_header.find_elements(By.TAG_NAME, "th")]
+    header_names = [x.text.replace("\n", "").strip() for x in sub_header.find_elements(By.TAG_NAME, "th")]
 
     # Add the prefix from the line above in the table
     prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
@@ -136,8 +137,9 @@ def get_baserunning_run_value(year: int, browser: selenium.webdriver.Firefox = N
             colspan = len(header_names) - current_col
         if prefix_header.get_attribute("class") == "th-title-header":
             prefix = prefix_header.text
-            for i in range(current_col, current_col + colspan):
-                header_names[i] = prefix + " " + header_names[i]
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
 
         current_col += colspan
 
@@ -171,7 +173,7 @@ def get_hitter_run_value(year: int, browser: selenium.webdriver.Firefox = None) 
     factors_table = browser.find_element(By.ID, table_name)
     header = factors_table.find_element(By.TAG_NAME, "thead")
     sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
-    header_names = [x.text.replace("\n", " ") for x in sub_header.find_elements(By.TAG_NAME, "th")]
+    header_names = [x.text.replace("\n", "").strip() for x in sub_header.find_elements(By.TAG_NAME, "th")]
 
     # Add the prefix from the line above in the table
     prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
@@ -183,8 +185,9 @@ def get_hitter_run_value(year: int, browser: selenium.webdriver.Firefox = None) 
             colspan = len(header_names) - current_col
         if prefix_header.get_attribute("class") == "th-title-header":
             prefix = prefix_header.text
-            for i in range(current_col, current_col + colspan):
-                header_names[i] = prefix + " " + header_names[i]
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
 
         current_col += colspan
 
@@ -223,7 +226,7 @@ def get_pitcher_run_value(year: int, browser: selenium.webdriver.Firefox = None)
     factors_table = browser.find_element(By.ID, table_name)
     header = factors_table.find_element(By.TAG_NAME, "thead")
     sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
-    header_names = [x.text.replace("\n", " ") for x in sub_header.find_elements(By.TAG_NAME, "th")]
+    header_names = [x.text.replace("\n", "").strip() for x in sub_header.find_elements(By.TAG_NAME, "th")]
 
     # Add the prefix from the line above in the table
     prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
@@ -235,8 +238,9 @@ def get_pitcher_run_value(year: int, browser: selenium.webdriver.Firefox = None)
             colspan = len(header_names) - current_col
         if prefix_header.get_attribute("class") == "th-title-header":
             prefix = prefix_header.text
-            for i in range(current_col, current_col + colspan):
-                header_names[i] = prefix + " " + header_names[i]
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
 
         current_col += colspan
 
@@ -275,7 +279,7 @@ def get_hitter_vs_pitch_arsenal_stats(year: int, browser: selenium.webdriver.Fir
     arsenal_table = browser.find_element(By.ID, table_name)
     header = arsenal_table.find_element(By.TAG_NAME, "thead")
     sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
-    header_names = [x.text.replace("\n", " ") for x in sub_header.find_elements(By.TAG_NAME, "th")]
+    header_names = [x.text.replace("\n", "").strip() for x in sub_header.find_elements(By.TAG_NAME, "th")]
 
     # Add the prefix from the line above in the table
     prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
@@ -287,8 +291,9 @@ def get_hitter_vs_pitch_arsenal_stats(year: int, browser: selenium.webdriver.Fir
             colspan = len(header_names) - current_col
         if prefix_header.get_attribute("class") == "th-title-header":
             prefix = prefix_header.text
-            for i in range(current_col, current_col + colspan):
-                header_names[i] = prefix + " " + header_names[i]
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
 
         current_col += colspan
 
@@ -314,3 +319,55 @@ def get_hitter_vs_pitch_arsenal_stats(year: int, browser: selenium.webdriver.Fir
 
     return pd.DataFrame(output_list)
 
+
+def get_pitcher_arsenal_stats(year: int, browser: selenium.webdriver.Firefox = None) -> pd.DataFrame:
+    url = str.format("https://baseballsavant.mlb.com/leaderboard/pitch-arsenal-stats?type=pitcher&pitchType=&year={}&team=&min=1&minPitches=1&sort=4&sortDir=desc", year)
+
+    if browser is None:
+        browser = webdriver.Firefox()
+
+    browser.get(url)
+
+    table_name = "arsenalStats"
+    arsenal_table = browser.find_element(By.ID, table_name)
+    header = arsenal_table.find_element(By.TAG_NAME, "thead")
+    sub_header = header.find_element(By.CLASS_NAME, "tr-component-row")
+    header_names = [x.text.replace("\n", "").strip() for x in sub_header.find_elements(By.TAG_NAME, "th")]
+
+    # Add the prefix from the line above in the table
+    prefix_headers = header.find_element(By.TAG_NAME, "tr").find_elements(By.TAG_NAME, "th")
+    current_col = 0
+    for prefix_header in prefix_headers:
+        colspan = int(prefix_header.get_attribute("colspan"))
+        # There is a bug in Statcast where they don't define the column spans for the final columns correctly, so clamp it
+        if current_col + colspan > len(header_names) - 1:
+            colspan = len(header_names) - current_col
+        if prefix_header.get_attribute("class") == "th-title-header":
+            prefix = prefix_header.text
+            if len(prefix) > 0:
+                for i in range(current_col, current_col + colspan):
+                    header_names[i] = prefix + " " + header_names[i]
+
+        current_col += colspan
+
+    table_body = arsenal_table.find_element(By.TAG_NAME, "tbody")
+    table_rows = table_body.find_elements(By.CLASS_NAME, "default-table-row   ")
+    output_list = list()
+    for row in table_rows:
+        values = [str_to_num(x.text) for x in row.find_elements(By.TAG_NAME, "td")]
+        if len(values) != len(header_names):
+            raise InvalidHeaderValueCount(len(header_names), len(values), table_name)
+        table_dict = dict(zip(header_names, values))
+        player_names = table_dict["Player"].split(",")
+        table_dict["Player"] = (player_names[1] + " " + player_names[0]).strip()
+        cells = row.find_elements(By.TAG_NAME, "td")
+        for cell in cells:
+            try:
+                portait_element = cell.find_element(By.CLASS_NAME, "player-mug")
+                table_dict["Id"] = portait_element.get_attribute("src").split("/")[-1].split(".")[0]
+            except NoSuchElementException:
+                pass
+        table_dict.pop("Team")
+        output_list.append(table_dict)
+
+    return pd.DataFrame(output_list)

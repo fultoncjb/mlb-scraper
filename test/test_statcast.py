@@ -98,5 +98,12 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(stats["Id"][0], "592450")
 
     def test_pitching_pitch_arsenal(self):
-        # TODO
-        pass
+        stats = statcast.get_pitcher_arsenal_stats(2024)
+        self.assertEqual(stats.shape, (3503, 19))
+        self.assertEqual(stats["Player"][0], "Dylan Cease")
+        self.assertEqual(stats["Pitch"][0], "SL Slider")
+        self.assertAlmostEqual(stats["RV/100"][0], 1.8, places=2)
+        self.assertEqual(stats["Run Value"][0], 25)
+        self.assertEqual(stats["Usage Pitches"][0], 1371)
+        self.assertEqual(stats["Standard PA"][0], 361)
+        self.assertEqual(stats["Id"][0], "656302")
