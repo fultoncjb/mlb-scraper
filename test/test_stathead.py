@@ -201,7 +201,7 @@ class StatheadTests(unittest.TestCase):
         self.assertEqual(vs_ids[0][0], "mussin001mic")
         self.assertEqual(vs_ids[0][1], 111)
         self.assertEqual(vs_ids[0][2], 24)
-        self.assertEqual(vs_ids[-1][0], "tadano001kaz")
+        self.assertEqual(vs_ids[-1][0], "johnso006mar")
         self.assertEqual(vs_ids[-1][1], 1)
         self.assertEqual(vs_ids[-1][2], 0)
         self.assertEqual(len(vs_ids), 1224)

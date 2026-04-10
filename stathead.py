@@ -31,7 +31,7 @@ def login_stathead(credentials: (str, str)) -> selenium.webdriver.Firefox:
         EC.presence_of_element_located((By.ID, "password")))
     password_field.send_keys(credentials[1])
     login_button = WebDriverWait(browser, 20).until(
-        EC.element_to_be_clickable((By.ID, "sh-login-button")))
+        EC.element_to_be_clickable((By.ID, "sh-submit-button")))
     login_button.click()
 
     return browser
@@ -94,7 +94,8 @@ def get_vs_pitcher_gamelogs(hitter_stathead_id: str, hitter_last_name: str, pitc
             main_table = browser.find_element(By.ID, "all_stathead_results_bvp_pa")
             switcher_element = main_table.find_element(By.XPATH, ".//div[@data-controls='#switcher_stathead_results_bvp_pa']")
             playoffs_button = WebDriverWait(switcher_element, 5).until(
-                EC.element_to_be_clickable((By.XPATH, ".//a[@data-show='.assoc_stats_bvp_pa_po']")))
+                EC.element_to_be_clickable(
+                    (By.XPATH, ".//a[@data-show='.assoc_stats_bvp_pa_po, #tfooter_stats_bvp_pa_po']")))
             # There is some bug in Selenium that will cause an exception here, so we attempt to run raw
             # Javascript to click the button
             try:
@@ -135,7 +136,10 @@ def get_vs_pitcher_gamelogs(hitter_stathead_id: str, hitter_last_name: str, pitc
                 row_dict["Inning"] = inning_element.text
 
                 # Interpret the runners on base field
-                rob_element = row.find_element(By.XPATH, ".//td[@data-stat='runners_on_bases']")
+                try:
+                    rob_element = row.find_element(By.XPATH, ".//td[@data-stat='runners_on_bases']")
+                except NoSuchElementException:
+                    rob_element = row.find_element(By.XPATH, ".//td[@data-stat='runners_on_bases_post']")
                 is_runner_on_first = False
                 if re.search("1", rob_element.text) is not None:
                     is_runner_on_first = True
@@ -154,7 +158,10 @@ def get_vs_pitcher_gamelogs(hitter_stathead_id: str, hitter_last_name: str, pitc
                 row_dict["Outs"] = int(out_element.text)
 
                 # Interpret the count field (i.e. total pitches, balls, strikes
-                count_element = row.find_element(By.XPATH, ".//td[@data-stat='pitches_pbp']")
+                try:
+                    count_element = row.find_element(By.XPATH, ".//td[@data-stat='pitches_pbp']")
+                except NoSuchElementException:
+                    count_element = row.find_element(By.XPATH, ".//td[@data-stat='pitches_pbp_post']")
                 count_match = re.match("([0-9]*) \(([0-9]*)-([0-9]*)\)", count_element.text)
                 # Some games early on do not have these fields populated
                 if count_match is not None:
@@ -357,7 +364,10 @@ def get_season_hitter_identifiers_and_pa(year_start: int,  credentials: (str, st
 
         for player_row in player_rows:
             if player_row.get_attribute("class") != "thead":
-                player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                try:
+                    player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                except selenium.common.exceptions.NoSuchElementException:
+                    continue
                 player_link = player_name_entry.find_element(By.TAG_NAME, "a")
                 link_text = player_link.get_attribute("href")
                 hitter_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
@@ -402,7 +412,10 @@ def get_season_pitcher_identifiers_and_bf(year_start: int,  credentials: (str, s
 
         for player_row in player_rows:
             if player_row.get_attribute("class") != "thead":
-                player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                try:
+                    player_name_entry = player_row.find_element(By.XPATH, ".//td[@data-stat='name_display']")
+                except selenium.common.exceptions.NoSuchElementException:
+                    continue
                 player_link = player_name_entry.find_element(By.TAG_NAME, "a")
                 link_text = player_link.get_attribute("href")
                 player_id = re.match(".*/([a-z'._]*.?[0-9]*).shtml", link_text).group(1)
